@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>微博收藏整理工具 · 社区站</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f5f7fa;
+    color: #303133;
+    line-height: 1.6;
+  }
+  a { color: #409eff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .container { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+  /* 顶部导航 */
+  .navbar {
+    position: sticky; top: 0; z-index: 100;
+    background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.08);
+  }
+  .navbar-inner {
+    max-width: 960px; margin: 0 auto; padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo { font-size: 18px; font-weight: 700; color: #409eff; }
+  .nav-links { display: flex; gap: 20px; font-size: 14px; }
+  .nav-links a { color: #606266; }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+    color: #fff; padding: 70px 0 60px; text-align: center;
+  }
+  .hero h1 { font-size: 36px; margin-bottom: 14px; }
+  .hero p { font-size: 16px; opacity: .92; margin-bottom: 30px; max-width: 600px; margin-left: auto; margin-right: auto; }
+  .btn-group { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; padding: 12px 28px; border-radius: 6px;
+    font-size: 15px; font-weight: 600; cursor: pointer; border: none;
+    transition: all .2s; text-decoration: none;
+  }
+  .btn-primary { background: #fff; color: #409eff; }
+  .btn-primary:hover { background: #ecf5ff; text-decoration: none; }
+  .btn-outline { background: transparent; color: #fff; border: 2px solid #fff; }
+  .btn-outline:hover { background: rgba(255,255,255,.15); text-decoration: none; }
+
+  /* 区块通用 */
+  section { padding: 50px 0; }
+  section h2 {
+    font-size: 26px; text-align: center; margin-bottom: 10px; color: #303133;
+  }
+  .section-sub { text-align: center; color: #909399; margin-bottom: 36px; font-size: 14px; }
+
+  /* 功能卡片 */
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+  .feature-card {
+    background: #fff; border-radius: 10px; padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06); transition: transform .2s;
+  }
+  .feature-card:hover { transform: translateY(-4px); }
+  .feature-icon { font-size: 32px; margin-bottom: 12px; }
+  .feature-card h3 { font-size: 17px; margin-bottom: 8px; color: #303133; }
+  .feature-card p { font-size: 13px; color: #606266; }
+
+  /* 步骤 */
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; counter-reset: step; }
+  .step-card {
+    background: #fff; border-radius: 10px; padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06); position: relative;
+  }
+  .step-num {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #409eff; color: #fff; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 14px; font-size: 16px;
+  }
+  .step-card h3 { font-size: 16px; margin-bottom: 8px; }
+  .step-card p { font-size: 13px; color: #606266; }
+  .step-card code { background: #f5f7fa; padding: 2px 6px; border-radius: 3px; font-size: 12px; color: #e6a23c; }
+
+  /* 教程 */
+  .tutorial { background: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+  .tutorial h3 { font-size: 17px; margin: 20px 0 10px; color: #409eff; }
+  .tutorial h3:first-child { margin-top: 0; }
+  .tutorial p, .tutorial li { font-size: 14px; color: #606266; }
+  .tutorial ol, .tutorial ul { padding-left: 22px; margin: 8px 0; }
+  .tutorial li { margin-bottom: 6px; }
+  .tutorial code { background: #f5f7fa; padding: 2px 6px; border-radius: 3px; font-size: 13px; color: #e6a23c; }
+  .alert {
+    background: #fdf6ec; border-left: 4px solid #e6a23c;
+    padding: 12px 16px; border-radius: 4px; margin: 14px 0; font-size: 13px; color: #606266;
+  }
+  .alert-success { background: #f0f9eb; border-color: #67c23a; }
+
+  /* 更新日志 */
+  .changelog { background: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+  .log-item { padding: 14px 0; border-bottom: 1px solid #ebeef5; }
+  .log-item:last-child { border-bottom: none; }
+  .log-version { font-weight: 700; color: #409eff; font-size: 15px; }
+  .log-date { color: #909399; font-size: 12px; margin-left: 8px; }
+  .log-item ul { padding-left: 22px; margin-top: 8px; }
+  .log-item li { font-size: 13px; color: #606266; margin-bottom: 4px; }
+
+  /* FAQ */
+  .faq-item {
+    background: #fff; border-radius: 8px; margin-bottom: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.05); overflow: hidden;
+  }
+  .faq-q {
+    padding: 16px 20px; cursor: pointer; font-weight: 600; font-size: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .faq-q::after { content: '+'; font-size: 20px; color: #909399; transition: transform .2s; }
+  .faq-item.open .faq-q::after { transform: rotate(45deg); }
+  .faq-a { padding: 0 20px; max-height: 0; overflow: hidden; transition: max-height .3s ease, padding .3s ease; font-size: 13px; color: #606266; }
+  .faq-item.open .faq-a { padding: 0 20px 16px; max-height: 500px; }
+
+  /* 页脚 */
+  footer { background: #303133; color: #c0c4cc; padding: 30px 0; text-align: center; font-size: 13px; }
+  footer a { color: #409eff; }
+
+  @media (max-width: 600px) {
+    .hero h1 { font-size: 26px; }
+    .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <div class="logo">📋 微博收藏整理工具</div>
+    <div class="nav-links">
+      <a href="#features">功能</a>
+      <a href="#quickstart">快速开始</a>
+      <a href="#tutorial">使用教程</a>
+      <a href="#changelog">更新日志</a>
+      <a href="#faq">常见问题</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="container">
+    <h1>📋 微博收藏整理工具</h1>
+    <p>专为内容组打造的微博数据管理系统 —— 艺人/年份维度管理微博与评论，支持图片视频、链接失效检测、自动抓取正文、数据报告导出。纯网页单文件，Windows / Mac 通用，数据只存在你自己的电脑。</p>
+    <div class="btn-group">
+      <a class="btn btn-primary" href="https://raw.githubusercontent.com/你的用户名/你的仓库/main/index.html" download="index.html">⬇️ 下载工具</a>
+      <a class="btn btn-outline" href="#quickstart">🚀 快速开始</a>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="container">
+    <h2>✨ 核心功能</h2>
+    <p class="section-sub">从收藏整理到数据报告，一站式搞定</p>
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon">👤</div>
+        <h3>艺人 / 年份管理</h3>
+        <p>按艺人、年份组织微博数据，多账号登录，数据相互隔离，支持数据导入导出。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🖼️</div>
+        <h3>图片 / 视频管理</h3>
+        <p>微博配图与视频自动识别，支持批量上传、标记缺图、图频确认，图片防盗链自动处理。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔗</div>
+        <h3>链接失效检测</h3>
+        <p>「只存链接」模式自动检测微博是否失效，自动抓取正文与图片，红框标记已删除内容。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💬</div>
+        <h3>评论管理</h3>
+        <p>区分艺人本人评论与粉丝评论，树形回复结构，支持评论编辑、删除、批量操作。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>数据报告</h3>
+        <p>一键生成年度数据报告，包含微博数量、图片统计、评论分析等可视化内容。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>隐私安全</h3>
+        <p>纯前端单文件，数据存储在你本地浏览器（IndexedDB）或本地文件夹，不上传任何服务器。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="quickstart" style="background:#fff;">
+  <div class="container">
+    <h2>🚀 快速开始</h2>
+    <p class="section-sub">三步上手，零安装也能用基础功能</p>
+    <div class="steps">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <h3>下载工具</h3>
+        <p>点击上方「下载工具」按钮，得到一个 <code>index.html</code> 文件。</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <h3>双击打开</h3>
+        <p>直接双击 <code>index.html</code>，用浏览器打开即可使用。图片视频自动显示。</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <h3>配置通道（可选）</h3>
+        <p>想要「只存链接」自动检测/抓取？在 ④设置页填入社区提供的代理地址，或部署自己的 Cloudflare Worker。</p>
+      </div>
+    </div>
+    <div class="alert alert-success" style="margin-top:24px;">
+      💡 <b>零安装即可使用基础功能</b>：双击 index.html 打开，图片/视频自动显示，「完整保存」手贴模式全功能可用。只有「只存链接」的自动检测/抓取需要配置代理通道。
+    </div>
+  </div>
+</section>
+
+<section id="tutorial">
+  <div class="container">
+    <h2>📖 使用教程</h2>
+    <p class="section-sub">从导入数据到导出报告的完整流程</p>
+    <div class="tutorial">
+      <h3>1. 注册与登录</h3>
+      <ol>
+        <li>打开工具后，点击「注册」创建账号（账号密码仅存在你本地浏览器）。</li>
+        <li>登录后选择「艺人」与「年份」，进入工作区。</li>
+      </ol>
+
+      <h3>2. 导入数据</h3>
+      <ol>
+        <li>点击左侧「①数据导入」。</li>
+        <li>选择包含微博/评论 xlsx 文件的文件夹（Chrome/Edge 支持一键选文件夹，其他浏览器可逐个选文件）。</li>
+        <li>工具自动解析并导入数据，可在 ②③ 页查看。</li>
+      </ol>
+
+      <h3>3. 管理微博</h3>
+      <ol>
+        <li>「②微博整理」：编辑文案、上传图片/视频、标记缺图、删除微博。</li>
+        <li>「③评论整理」：管理评论，区分艺人本人评论与粉丝评论。</li>
+        <li>支持「只存链接」模式：粘贴微博链接，自动检测存活并抓取正文/图片。</li>
+      </ol>
+
+      <h3>4. 配置自动检测通道（可选）</h3>
+      <ol>
+        <li>进入「④设置」→「外链与检测通道」。</li>
+        <li>三选一：
+          <ul>
+            <li><b>油猴脚本</b>：装 Tampermonkey 扩展 + 粘贴脚本，全自动，无需 Python。</li>
+            <li><b>Cloudflare Worker</b>：部署一次，对方零安装全自动（推荐发给他人用）。</li>
+            <li><b>本地代理</b>：装 Python 后双击启动器，填 <code>http://127.0.0.1:8787</code>。</li>
+          </ul>
+        </li>
+        <li>填好地址后点「保存」→「测试连通」。</li>
+      </ol>
+
+      <h3>5. 导出报告</h3>
+      <ol>
+        <li>整理完成后，点击「⑥数据报告」。</li>
+        <li>选择艺人和年份，生成可视化报告。</li>
+        <li>可导出为 HTML 或 Excel。</li>
+      </ol>
+
+      <div class="alert">
+        ⚠️ <b>注意</b>：数据存储在你本地浏览器（IndexedDB）。<b>清除浏览器数据会丢失所有内容</b>，建议定期使用「导出数据」功能备份。
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="changelog" style="background:#fff;">
+  <div class="container">
+    <h2>📝 更新日志</h2>
+    <p class="section-sub">版本迭代记录</p>
+    <div class="changelog">
+      <div class="log-item">
+        <div><span class="log-version">v2.0</span><span class="log-date">2026-09</span></div>
+        <ul>
+          <li>✨ 重构为单文件 Vue3 应用，数据存储迁移到 IndexedDB</li>
+          <li>🖼️ 图片防盗链自动处理（no-referrer），双击打开即可显示图片</li>
+          <li>🔗 新增「只存链接」模式：自动检测微博存活、抓取正文与图片</li>
+          <li>🌐 新增外链检测通道：油猴脚本 / Cloudflare Worker / 本地代理 三选一</li>
+          <li>📱 适配 GitHub Pages 部署，支持跨浏览器使用</li>
+          <li>📜 新增首次使用风险告知书</li>
+        </ul>
+      </div>
+      <div class="log-item">
+        <div><span class="log-version">v1.0</span><span class="log-date">2025</span></div>
+        <ul>
+          <li>🎉 初始版本：艺人/年份维度的微博与评论管理</li>
+          <li>📊 支持数据导入导出与年度报告生成</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="container">
+    <h2>❓ 常见问题</h2>
+    <p class="section-sub">你可能想知道的</p>
+
+    <div class="faq-item">
+      <div class="faq-q">数据存在哪里？安全吗？</div>
+      <div class="faq-a">数据存储在你本地浏览器的 IndexedDB 中，或你选择的本地文件夹。<b>不会上传到任何服务器</b>，完全私密。但请注意：清除浏览器数据会丢失内容，建议定期导出备份。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">需要装 Python 吗？</div>
+      <div class="faq-a">不需要。基础功能（图片显示、微博/评论管理）零安装即可使用。只有「只存链接」的自动检测/抓取需要配置通道，可选油猴脚本（无需 Python）或 Cloudflare Worker（对方零安装）。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Mac 能用吗？</div>
+      <div class="faq-a">完全可以。工具是纯网页单文件，Windows / Mac / Linux 通用。如果要本地代理，Mac 用 <code>python3 weibo_proxy.py</code> 或双击 <code>启动代理.command</code>。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">图片显示不出来怎么办？</div>
+      <div class="faq-a">确保用双击 index.html 的方式打开（file:// 协议），或配置了有效的代理通道。如果个别图片仍不显示，可能是原图已被微博删除（外链永久失效）。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">怎么分享给同事用？</div>
+      <div class="faq-a">把 index.html 文件发给对方即可。如果对方需要全自动检测功能，建议你先部署一个 Cloudflare Worker，把 Worker 地址告诉对方填进 ④设置页。对方不用装 Python、不用装扩展。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">支持哪些浏览器？</div>
+      <div class="faq-a">推荐使用 Chrome、Edge、360、QQ、搜狗等 Chromium 内核浏览器（全功能支持）。Firefox、Safari 可使用核心功能，但批量导入/导出文件夹功能受限。</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>📋 微博收藏整理工具 · 社区站</p>
+    <p style="margin-top:8px;">本工具仅供学习交流使用 · 数据版权归原作者所有 · 请遵守相关法律法规</p>
+  </div>
+</footer>
+
+<script>
+  // FAQ 展开/收起
+  document.querySelectorAll('.faq-item').forEach(item => {
+    item.querySelector('.faq-q').addEventListener('click', () => {
+      item.classList.toggle('open');
+    });
+  });
+  // 平滑滚动
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const t = document.querySelector(a.getAttribute('href'));
+      if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth' }); }
+    });
+  });
+</script>
+
+</body>
+</html>
