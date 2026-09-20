@@ -319,7 +319,7 @@
             if (typeof window.XLSX === 'undefined') missing.push('SheetJS（xlsx.full.min.js）');
             if (typeof window.JSZip === 'undefined') missing.push('JSZip（jszip.min.js）');
             if (missing.length > 0) {
-                problems.push('以下 CDN 资源未成功加载：<b>' + missing.join('、') + '</b>。四个库已下载到本地 libs/ 目录，支持离线运行。请检查 libs/ 目录是否完整（应有 vue.global.js、index.full.min.js、index.css、xlsx.full.min.js、jszip.min.js）。');
+                problems.push('以下依赖库未成功加载：<b>' + missing.join('、') + '</b>。这些库文件应与本页面同目录的 libs/ 文件夹内（应有 vue.global.js、index.full.min.js、index.css、xlsx.full.min.js、jszip.min.js）。若为线上部署，请确认 libs/ 目录已完整上传到仓库，并等 GitHub Pages 构建完成（1-2 分钟）后强刷（Ctrl+F5）。');
             }
             return problems;
         }
@@ -479,11 +479,6 @@
         .guide-btn-skip:hover {
             background: #f5f7fa;
         }
-        .worker-code {
-            background: #1e1e2e; color: #a6e3a1; padding: 14px; border-radius: 8px;
-            font-size: 12px; line-height: 1.6; overflow-x: auto; white-space: pre; margin: 0;
-            font-family: Consolas, Monaco, 'Courier New', monospace;
-        }
     </style>
 
     <script>
@@ -491,8 +486,8 @@
 
         const YEARS = Array.from({length: 12}, (_, i) => new Date().getFullYear() - i);
 
-        // 社区站地址（部署到 GitHub Pages 后改成完整 URL，如 https://你的用户名.github.io/仓库名/）
-        const COMMUNITY_URL = '../社区站/index.html';
+        // 社区站地址（GitHub Pages 线上地址）
+        const COMMUNITY_URL = 'https://chanzuiyv.github.io/communitysite/';
 
         // ============================================================
         // IndexedDB 私有存储层（用户不可见文件路径，数据不出本机）
@@ -7528,19 +7523,14 @@
                                     </div>
                                 </el-alert>
 
-                                <el-alert type="success" :closable="false" style="margin-bottom:8px;" title="方案三 · 云端 Worker（发给他人用·对方零安装全自动，⭐推荐分享）">
+                                <el-alert type="success" :closable="false" style="margin-bottom:8px;" title="方案三 · 云端 Worker（手机可用全自动，可选）">
                                     <div style="font-size:13px;line-height:1.9;">
-                                        你部署一次，<b>对方只填一个网址就能全自动，不用装 Python、不用装扩展</b>（图片显示、链接检测、自动抓正文都走你的 Worker）。<br>
-                                        1. 打开 <a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noopener noreferrer">Cloudflare</a> 注册账号（免费）。<br>
-                                        2. 左侧菜单选 <b>Workers &amp; Pages</b> → <b>Create application</b> → <b>Create Worker</b>，随便起个名字 → <b>Deploy</b>。<br>
-                                        3. 点 <b>Edit code</b>，把下方整段代码粘贴覆盖进去 → <b>Deploy</b>。<br>
-                                        4. 把 Worker 地址（形如 <code>https://xxx.账号名.workers.dev</code>）填入下方输入框，点「保存」再「测试连通」。<br>
-                                        5. 把这个地址告诉对方，对方在 ④设置页填上同样地址即可全自动。
+                                        你部署一次，所有人在下方填你的 Worker 地址即全自动。<b>无需 Python、无需扩展，手机浏览器也能用</b>（油猴装不了的手机端，这是唯一全自动方案）。<br>
+                                        三步：<b>①</b> 注册 <a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noopener noreferrer">Cloudflare</a>（免费）→ <b>②</b> Workers &amp; Pages → Create Worker → Deploy → <b>③</b> Edit code 粘贴下方复制的代码 → 再点 Deploy，把得到的 <code>https://xxx.workers.dev</code> 填到下方「测试连通」。
                                     </div>
-                                    <div style="display:flex;justify-content:flex-end;margin:6px 0;">
-                                        <el-button size="small" @click="copyWorkerScript">📋 复制 Worker 代码</el-button>
+                                    <div style="margin:8px 0 2px;">
+                                        <el-button size="small" type="primary" plain @click="copyWorkerScript">📋 一键复制 Worker 代码（无需查看内容，粘贴到 Cloudflare 即可）</el-button>
                                     </div>
-                                    <pre class="worker-code" v-text="WORKER_SCRIPT"></pre>
                                 </el-alert>
 
                                 <el-alert :type="isHttpsEnv ? 'error' : 'info'" :closable="false" style="margin-bottom:10px;" :title="isHttpsEnv ? '方案四 · 本地代理（当前 HTTPS 页面不可用，请用方案三）' : '方案四 · 本地代理程序（自己电脑用·需装 Python）'">
