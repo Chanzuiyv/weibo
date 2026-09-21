@@ -387,26 +387,59 @@
         body.mode-mobile .collapse-body { display: none; }
         body.mode-mobile .collapse-body.open { display: block; }
 
-        /* ===== 微博卡片（②③页）呼吸感优化 ===== */
+        /* ===== 微博卡片（②页）主次重排：原文为主、功能键为辅 ===== */
         body.mode-mobile .weibo-card { margin-bottom: 16px; }
         body.mode-mobile .weibo-card .el-card__body { padding: 14px 12px; }
-        /* 头部行（ID/日期/链接 + 序号）允许换行 */
+        body.mode-mobile .weibo-card .el-card { position: relative; }
+        /* 头部行（ID/日期/链接 + 标签）允许换行 */
         body.mode-mobile .weibo-card div[style*="justify-content: space-between"] { flex-wrap: wrap; row-gap: 8px; }
-        /* 复选框改为独占一行，内容区不再被挤压 */
+        /* 复选框独占一行；删除改为右上角 × */
         body.mode-mobile .weibo-card .el-card__body > div:first-child { display: block; }
         body.mode-mobile .weibo-card .el-card__body > div:first-child > .el-checkbox { margin-bottom: 8px; }
+        body.mode-mobile .weibo-card .mobile-del-x {
+            display: inline-flex; position: absolute; top: 8px; right: 8px; z-index: 5;
+        }
+        body.mode-mobile .weibo-card .del-weibo-btn { display: none !important; }
+        /* 年度序号隐藏 */
+        body.mode-mobile .weibo-card .localid-label,
+        body.mode-mobile .weibo-card .localid-label + .el-input-number { display: none !important; }
+        /* 链接缩短：只显示 🔗 下划线短链；打开原文按钮隐藏 */
+        body.mode-mobile .weibo-card .link-url-full { display: none !important; }
+        body.mode-mobile .weibo-card .open-origin-btn { display: none !important; }
+        .link-url-short { display: none; }
+        body.mode-mobile .weibo-card .link-url-short {
+            display: inline-block; font-size: 18px; color: #409eff;
+            text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+        }
         /* 各区块统一留白 */
         body.mode-mobile .weibo-card div[style*="flex: 1"] > div { margin-bottom: 14px !important; }
-        /* 上传图片/视频按钮整行大按钮 */
-        body.mode-mobile .weibo-card div[style*="display: flex"]:has(> input[type="file"]) > .el-button { width: 100%; height: 42px; font-size: 14px; }
-        /* 底部操作按钮：两列大按钮 */
+        /* 功能键做小：emoji 短按钮替代文字按钮 */
+        .btn-emoji { display: none; }
+        body.mode-mobile .btn-emoji { display: inline; font-size: 16px; }
+        body.mode-mobile .btn-text { display: none; }
         body.mode-mobile .weibo-card div[style*="flex: 1"] > div:last-child { flex-wrap: wrap; }
         body.mode-mobile .weibo-card div[style*="flex: 1"] > div:last-child > .el-button {
-            flex: 1 1 calc(50% - 4px); margin-left: 0 !important;
-            height: 42px; font-size: 14px;
+            flex: 0 0 auto; height: 34px; padding: 0 14px;
+            font-size: 15px; margin-left: 0 !important;
         }
-        /* ③页微博原文区同样加留白 */
-        body.mode-mobile .weibo-original { padding: 10px 0; }
+        body.mode-mobile .weibo-card div[style*="display: flex"]:has(> input[type="file"]) > .el-button {
+            width: auto; height: 34px; padding: 0 14px; font-size: 15px;
+        }
+        /* 原文文本框：独占整行拉长，emoji 键移到下一行 */
+        body.mode-mobile .weibo-card div[style*="display: flex"]:has(> .el-textarea) { flex-wrap: wrap; }
+        body.mode-mobile .weibo-card .el-textarea { flex: 1 1 100% !important; }
+        body.mode-mobile .weibo-card .el-textarea__inner {
+            min-height: 140px !important; font-size: 15px; line-height: 1.7;
+        }
+        /* 图片三列铺满宽度、视频全宽 */
+        body.mode-mobile .weibo-card .el-image {
+            width: calc((100% - 16px) / 3) !important; height: auto !important; aspect-ratio: 1 / 1;
+        }
+        body.mode-mobile .weibo-card .el-image__inner { width: 100% !important; height: 100% !important; object-fit: cover; }
+        body.mode-mobile .weibo-card video { width: 100% !important; height: auto !important; }
+        /* ③页微博原文区：放大铺满 */
+        body.mode-mobile .weibo-original { padding: 12px; font-size: 15px; }
+        body.mode-mobile .weibo-original p { font-size: 15px; line-height: 1.8; }
 
         /* 自动响应式（没有手动切换过时，按屏幕宽度判断） */
         @media (max-width: 768px) {
@@ -486,20 +519,48 @@
             body:not([data-ui-mode]) .collapse-body { display: none; }
             body:not([data-ui-mode]) .collapse-body.open { display: block; }
 
-            /* 微博卡片（②③页）呼吸感优化 */
+            /* 微博卡片（②页）主次重排：原文为主、功能键为辅 */
             body:not([data-ui-mode]) .weibo-card { margin-bottom: 16px; }
             body:not([data-ui-mode]) .weibo-card .el-card__body { padding: 14px 12px; }
+            body:not([data-ui-mode]) .weibo-card .el-card { position: relative; }
             body:not([data-ui-mode]) .weibo-card div[style*="justify-content: space-between"] { flex-wrap: wrap; row-gap: 8px; }
             body:not([data-ui-mode]) .weibo-card .el-card__body > div:first-child { display: block; }
             body:not([data-ui-mode]) .weibo-card .el-card__body > div:first-child > .el-checkbox { margin-bottom: 8px; }
+            body:not([data-ui-mode]) .weibo-card .mobile-del-x {
+                display: inline-flex; position: absolute; top: 8px; right: 8px; z-index: 5;
+            }
+            body:not([data-ui-mode]) .weibo-card .del-weibo-btn { display: none !important; }
+            body:not([data-ui-mode]) .weibo-card .localid-label,
+            body:not([data-ui-mode]) .weibo-card .localid-label + .el-input-number { display: none !important; }
+            body:not([data-ui-mode]) .weibo-card .link-url-full { display: none !important; }
+            body:not([data-ui-mode]) .weibo-card .open-origin-btn { display: none !important; }
+            body:not([data-ui-mode]) .weibo-card .link-url-short {
+                display: inline-block; font-size: 18px; color: #409eff;
+                text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+            }
             body:not([data-ui-mode]) .weibo-card div[style*="flex: 1"] > div { margin-bottom: 14px !important; }
-            body:not([data-ui-mode]) .weibo-card div[style*="display: flex"]:has(> input[type="file"]) > .el-button { width: 100%; height: 42px; font-size: 14px; }
+            body:not([data-ui-mode]) .btn-emoji { display: inline; font-size: 16px; }
+            body:not([data-ui-mode]) .btn-text { display: none; }
             body:not([data-ui-mode]) .weibo-card div[style*="flex: 1"] > div:last-child { flex-wrap: wrap; }
             body:not([data-ui-mode]) .weibo-card div[style*="flex: 1"] > div:last-child > .el-button {
-                flex: 1 1 calc(50% - 4px); margin-left: 0 !important;
-                height: 42px; font-size: 14px;
+                flex: 0 0 auto; height: 34px; padding: 0 14px;
+                font-size: 15px; margin-left: 0 !important;
             }
-            body:not([data-ui-mode]) .weibo-original { padding: 10px 0; }
+            body:not([data-ui-mode]) .weibo-card div[style*="display: flex"]:has(> input[type="file"]) > .el-button {
+                width: auto; height: 34px; padding: 0 14px; font-size: 15px;
+            }
+            body:not([data-ui-mode]) .weibo-card div[style*="display: flex"]:has(> .el-textarea) { flex-wrap: wrap; }
+            body:not([data-ui-mode]) .weibo-card .el-textarea { flex: 1 1 100% !important; }
+            body:not([data-ui-mode]) .weibo-card .el-textarea__inner {
+                min-height: 140px !important; font-size: 15px; line-height: 1.7;
+            }
+            body:not([data-ui-mode]) .weibo-card .el-image {
+                width: calc((100% - 16px) / 3) !important; height: auto !important; aspect-ratio: 1 / 1;
+            }
+            body:not([data-ui-mode]) .weibo-card .el-image__inner { width: 100% !important; height: 100% !important; object-fit: cover; }
+            body:not([data-ui-mode]) .weibo-card video { width: 100% !important; height: auto !important; }
+            body:not([data-ui-mode]) .weibo-original { padding: 12px; font-size: 15px; }
+            body:not([data-ui-mode]) .weibo-original p { font-size: 15px; line-height: 1.8; }
         }
 
         /* UI 切换按钮 */
@@ -6775,6 +6836,7 @@
                                                     }"
                                                     style="margin-top: 4px;"
                                                 ></el-checkbox>
+                                                <el-button class="mobile-del-x" type="danger" size="small" circle @click="handleDeleteWeibo(weibo.weiboId)" title="删除微博">×</el-button>
                                                 <div style="flex: 1;">
                                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
                                                 <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
@@ -6801,7 +6863,7 @@
                                                         已{{ weibo.status.reviewCount }}审
                                                     </el-tag>
                                                     <el-tag v-if="weibo.isImageMissing" type="danger" size="small">缺图</el-tag>
-                                                    <span>年度序号:</span>
+                                                    <span class="localid-label">年度序号:</span>
                                                     <el-input-number 
                                                         :model-value="weibo.localId" 
                                                         @update:model-value="(v) => handleUpdateLocalId(weibo.weiboId, v)"
@@ -6814,11 +6876,12 @@
                                                 <div style="background: #f5f7fa; border: 1px solid #e4e7ed; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px;">
                                                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                                                         <span style="font-size: 18px;">🔗</span>
-                                                        <a :href="weiboLinkOf(weibo)" target="_blank" rel="noopener" style="font-size: 13px; color: #409eff; word-break: break-all; flex: 1; min-width: 160px;">{{ weiboLinkOf(weibo) }}</a>
+                                                        <a :href="weiboLinkOf(weibo)" target="_blank" rel="noopener" class="link-url-full" style="font-size: 13px; color: #409eff; word-break: break-all; flex: 1; min-width: 160px;">{{ weiboLinkOf(weibo) }}</a>
+                                                        <a :href="weiboLinkOf(weibo)" target="_blank" rel="noopener" class="link-url-short" title="打开原文链接" @click.stop>🔗</a>
                                                         <el-tag v-if="weibo.linkStatus === 'alive'" type="success" effect="dark" size="small">✓ 链接正常</el-tag>
                                                         <el-tag v-else-if="weibo.linkStatus === 'dead'" type="danger" effect="dark" size="small">⚠️ 已失效</el-tag>
                                                         <el-tag v-else type="info" size="small">未检测</el-tag>
-                                                        <el-button type="primary" size="small" @click.stop="openWeiboLink(weibo)">🔗 打开原文</el-button>
+                                                        <el-button class="open-origin-btn" type="primary" size="small" @click.stop="openWeiboLink(weibo)">🔗 打开原文</el-button>
                                                         <el-button size="small" :loading="linkCheckingIds.includes(weibo.weiboId)" @click.stop="handleCheckLink(weibo)">🔄 重新检测</el-button>
                                                     </div>
                                                     <div v-if="weibo.linkStatus === 'dead'" style="background: #fef0f0; border: 1px solid #fbc4c4; color: #c45656; border-radius: 6px; padding: 8px 10px; font-size: 12.5px; margin-top: 9px; line-height: 1.6;">
@@ -6878,7 +6941,7 @@
                                                     :ref="el => { if (el) weiboImageUploadRefs[weibo.weiboId] = el; }"
                                                     @change="(e) => handleAddWeiboImage(e, weibo.weiboId)"
                                                 >
-                                                <el-button type="primary" @click="handleClickWeiboUpload(weibo.weiboId)">上传图片</el-button>
+                                                <el-button type="primary" @click="handleClickWeiboUpload(weibo.weiboId)"><span class="btn-emoji">＋🖼️</span><span class="btn-text">上传图片</span></el-button>
                                             </div>
                                             <div v-if="weibo.videos.length > 0" style="margin-bottom: 12px;">
                                                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -6913,29 +6976,30 @@
                                                     :ref="el => { if (el) weiboVideoUploadRefs[weibo.weiboId] = el; }"
                                                     @change="(e) => handleAddWeiboVideo(e, weibo.weiboId)"
                                                 >
-                                                <el-button type="success" @click="handleClickWeiboVideoUpload(weibo.weiboId)">上传视频</el-button>
+                                                <el-button type="success" @click="handleClickWeiboVideoUpload(weibo.weiboId)"><span class="btn-emoji">＋🎬</span><span class="btn-text">上传视频</span></el-button>
                                             </div>
                                             <div style="display: flex; gap: 8px;">
-                                                <el-button 
-                                                    :type="weibo.status.isImageConfirmed ? 'success' : 'primary'" 
+                                                <el-button
+                                                    :type="weibo.status.isImageConfirmed ? 'success' : 'primary'"
                                                     @click="handleConfirmImage(weibo.weiboId)"
                                                 >
-                                                    {{ weibo.status.isImageConfirmed ? '✓ 图已确认' : '图/频确认' }}
+                                                    <span class="btn-emoji">{{ weibo.status.isImageConfirmed ? '✅' : '🖼️' }}</span><span class="btn-text">{{ weibo.status.isImageConfirmed ? '✓ 图已确认' : '图/频确认' }}</span>
                                                 </el-button>
-                                                <el-button 
-                                                    :type="weibo.status.isContentConfirmed ? 'success' : 'primary'" 
+                                                <el-button
+                                                    :type="weibo.status.isContentConfirmed ? 'success' : 'primary'"
                                                     @click="handleConfirmContent(weibo.weiboId)"
                                                 >
-                                                    {{ weibo.status.isContentConfirmed ? '✓ 文案已确认' : '文案确认' }}
+                                                    <span class="btn-emoji">{{ weibo.status.isContentConfirmed ? '✅' : '📝' }}</span><span class="btn-text">{{ weibo.status.isContentConfirmed ? '✓ 文案已确认' : '文案确认' }}</span>
                                                 </el-button>
-                                                <el-button 
-                                                    :type="weibo.isImageMissing ? 'danger' : 'warning'" 
+                                                <el-button
+                                                    :type="weibo.isImageMissing ? 'danger' : 'warning'"
                                                     @click="handleToggleWeiboImageMissing(weibo.weiboId)"
                                                 >
                                                     {{ weibo.isImageMissing ? '✗ 取消缺图' : '标记缺图' }}
                                                 </el-button>
-                                                <el-button 
-                                                    type="danger" 
+                                                <el-button
+                                                    class="del-weibo-btn"
+                                                    type="danger"
                                                     @click="handleDeleteWeibo(weibo.weiboId)"
                                                 >
                                                     删除微博
