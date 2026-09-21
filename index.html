@@ -357,6 +357,29 @@
         body.mode-mobile .avatar-ring { width: 70px; height: 70px; padding: 2px; }
         body.mode-mobile .profile-avatar { width: 64px; height: 64px; }
 
+        /* 手机端栅格堆叠：所有 el-col 并排改单列 */
+        body.mode-mobile .el-row { display: block; margin-left: 0 !important; margin-right: 0 !important; }
+        body.mode-mobile .el-row .el-col { max-width: 100%; flex: 0 0 100%; padding-left: 0 !important; padding-right: 0 !important; }
+        /* 表单 label 上置，输入框不再被 label 挤窄 */
+        body.mode-mobile .el-form-item { display: block; margin-bottom: 14px; }
+        body.mode-mobile .el-form-item__label { display: block; width: auto !important; text-align: left; padding: 0 0 4px; }
+        body.mode-mobile .el-form-item__content { margin-left: 0 !important; }
+        body.mode-mobile .el-form--inline .el-form-item { display: block; margin-right: 0; }
+        /* 输入类组件全宽 */
+        body.mode-mobile .el-input,
+        body.mode-mobile .el-select,
+        body.mode-mobile .el-date-editor.el-input,
+        body.mode-mobile .el-input-number { width: 100% !important; }
+        body.mode-mobile .header-bar .el-input,
+        body.mode-mobile .header-bar .el-select { width: 100% !important; margin-right: 0 !important; }
+        /* 单选按钮可换行，文字可折行；带边框单选各占整行 */
+        body.mode-mobile .el-radio-group { flex-wrap: wrap; row-gap: 8px; }
+        body.mode-mobile .el-radio.is-bordered { margin-right: 0; flex: 0 0 100% !important; }
+        body.mode-mobile .el-radio__label { white-space: normal; }
+        /* 行内 flex 小布局允许换行，避免文字挤成竖条 */
+        body.mode-mobile .stats-card [style*="display: flex"] { flex-wrap: wrap; }
+        body.mode-mobile .el-form [style*="display: flex"] { flex-wrap: wrap; }
+
         /* 自动响应式（没有手动切换过时，按屏幕宽度判断） */
         @media (max-width: 768px) {
             body:not([data-ui-mode]) .sidebar {
@@ -410,6 +433,24 @@
             body:not([data-ui-mode]) .comment-panel-header { padding: 6px 10px; font-size: 13px; }
             body:not([data-ui-mode]) .avatar-ring { width: 70px; height: 70px; padding: 2px; }
             body:not([data-ui-mode]) .profile-avatar { width: 64px; height: 64px; }
+            /* 手机端栅格堆叠 + 表单 label 上置 + 输入框全宽 */
+            body:not([data-ui-mode]) .el-row { display: block; margin-left: 0 !important; margin-right: 0 !important; }
+            body:not([data-ui-mode]) .el-row .el-col { max-width: 100%; flex: 0 0 100%; padding-left: 0 !important; padding-right: 0 !important; }
+            body:not([data-ui-mode]) .el-form-item { display: block; margin-bottom: 14px; }
+            body:not([data-ui-mode]) .el-form-item__label { display: block; width: auto !important; text-align: left; padding: 0 0 4px; }
+            body:not([data-ui-mode]) .el-form-item__content { margin-left: 0 !important; }
+            body:not([data-ui-mode]) .el-form--inline .el-form-item { display: block; margin-right: 0; }
+            body:not([data-ui-mode]) .el-input,
+            body:not([data-ui-mode]) .el-select,
+            body:not([data-ui-mode]) .el-date-editor.el-input,
+            body:not([data-ui-mode]) .el-input-number { width: 100% !important; }
+            body:not([data-ui-mode]) .header-bar .el-input,
+            body:not([data-ui-mode]) .header-bar .el-select { width: 100% !important; margin-right: 0 !important; }
+            body:not([data-ui-mode]) .el-radio-group { flex-wrap: wrap; row-gap: 8px; }
+            body:not([data-ui-mode]) .el-radio.is-bordered { margin-right: 0; flex: 0 0 100% !important; }
+            body:not([data-ui-mode]) .el-radio__label { white-space: normal; }
+            body:not([data-ui-mode]) .stats-card [style*="display: flex"] { flex-wrap: wrap; }
+            body:not([data-ui-mode]) .el-form [style*="display: flex"] { flex-wrap: wrap; }
         }
 
         /* UI 切换按钮 */
