@@ -454,18 +454,19 @@
             margin-right: 2px; vertical-align: -2px;
         }
         .plus-mark.plus-video { background: #67c23a; }
+        /* ④页收藏夹折叠标题：窄屏允许换行，名称/条数不被压缩折断 */
+        body.mode-mobile .folder-title-bar { flex-wrap: wrap; row-gap: 4px; }
+        body.mode-mobile .folder-title-bar > span { white-space: nowrap; flex: none; }
+        body.mode-mobile .folder-title-actions { flex-basis: 100%; margin-left: 0; }
         /* 原文文本框：独占整行拉长，emoji 键移到下一行 */
         body.mode-mobile .weibo-card div[style*="display: flex"]:has(> .el-textarea) { flex-wrap: wrap; }
         body.mode-mobile .weibo-card .el-textarea { flex: 1 1 100% !important; }
         body.mode-mobile .weibo-card .el-textarea__inner {
             min-height: 140px !important; font-size: 15px; line-height: 1.7;
         }
-        /* 图片三列铺满宽度、视频全宽 */
-        body.mode-mobile .weibo-card .el-image {
-            width: calc((100% - 16px) / 3) !important; height: auto !important; aspect-ratio: 1 / 1;
-        }
-        body.mode-mobile .weibo-card .el-image__inner { width: 100% !important; height: 100% !important; object-fit: cover; }
-        body.mode-mobile .weibo-card video { width: 100% !important; height: auto !important; }
+        /* 图片/视频缩略图保持小尺寸（勿放大） */
+        /* 缩略图删除×紧贴图片右上角（外层容器收缩到内容宽度） */
+        body.mode-mobile .weibo-card div[style*="position: relative"] { width: fit-content; }
         /* ③页微博原文区：放大铺满 */
         body.mode-mobile .weibo-original { padding: 12px; font-size: 15px; }
         body.mode-mobile .weibo-original p { font-size: 15px; line-height: 1.8; }
@@ -605,16 +606,18 @@
                 margin-right: 2px; vertical-align: -2px;
             }
             body:not([data-ui-mode]) .plus-mark.plus-video { background: #67c23a; }
+            /* ④页收藏夹折叠标题：窄屏允许换行，名称/条数不被压缩折断 */
+            body:not([data-ui-mode]) .folder-title-bar { flex-wrap: wrap; row-gap: 4px; }
+            body:not([data-ui-mode]) .folder-title-bar > span { white-space: nowrap; flex: none; }
+            body:not([data-ui-mode]) .folder-title-actions { flex-basis: 100%; margin-left: 0; }
             body:not([data-ui-mode]) .weibo-card div[style*="display: flex"]:has(> .el-textarea) { flex-wrap: wrap; }
             body:not([data-ui-mode]) .weibo-card .el-textarea { flex: 1 1 100% !important; }
             body:not([data-ui-mode]) .weibo-card .el-textarea__inner {
                 min-height: 140px !important; font-size: 15px; line-height: 1.7;
             }
-            body:not([data-ui-mode]) .weibo-card .el-image {
-                width: calc((100% - 16px) / 3) !important; height: auto !important; aspect-ratio: 1 / 1;
-            }
-            body:not([data-ui-mode]) .weibo-card .el-image__inner { width: 100% !important; height: 100% !important; object-fit: cover; }
-            body:not([data-ui-mode]) .weibo-card video { width: 100% !important; height: auto !important; }
+            /* 图片/视频缩略图保持小尺寸（勿放大） */
+            /* 缩略图删除×紧贴图片右上角（外层容器收缩到内容宽度） */
+            body:not([data-ui-mode]) .weibo-card div[style*="position: relative"] { width: fit-content; }
             body:not([data-ui-mode]) .weibo-original { padding: 12px; font-size: 15px; }
             body:not([data-ui-mode]) .weibo-original p { font-size: 15px; line-height: 1.8; }
         }
