@@ -437,8 +437,23 @@
         body.mode-mobile .review-tag { display: none !important; }
         body.mode-mobile .confirm-btn { display: none !important; }
         body.mode-mobile .link-icon-deco { display: none !important; }
-        /* 点赞/收藏/标签挪到 header 左下角独占一行 */
-        body.mode-mobile .weibo-card .item-actions { flex-basis: 100%; order: 99; margin-top: 4px; }
+        /* 点赞/收藏/标签：header 原位隐藏，挪到评论栏上方左下角 */
+        body.mode-mobile .head-actions { display: none !important; }
+        .bottom-actions { display: none; }
+        body.mode-mobile .bottom-actions { display: flex; align-items: center; gap: 6px; padding: 6px 0 2px; }
+        /* 标记缺图：header 里"添加微博"旁显示，底部旧位置随整行隐藏 */
+        .mark-missing-top { display: none !important; }
+        body.mode-mobile .mark-missing-top { display: inline-flex !important; }
+        body.mode-mobile .confirm-row { display: none !important; }
+        /* 上传按钮加号徽章（明显） */
+        .plus-mark {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 16px; height: 16px; border-radius: 50%;
+            background: #409eff; color: #fff;
+            font-size: 13px; font-weight: 700; line-height: 1;
+            margin-right: 2px; vertical-align: -2px;
+        }
+        .plus-mark.plus-video { background: #67c23a; }
         /* 原文文本框：独占整行拉长，emoji 键移到下一行 */
         body.mode-mobile .weibo-card div[style*="display: flex"]:has(> .el-textarea) { flex-wrap: wrap; }
         body.mode-mobile .weibo-card .el-textarea { flex: 1 1 100% !important; }
@@ -575,8 +590,21 @@
             body:not([data-ui-mode]) .review-tag { display: none !important; }
             body:not([data-ui-mode]) .confirm-btn { display: none !important; }
             body:not([data-ui-mode]) .link-icon-deco { display: none !important; }
-            /* 点赞/收藏/标签挪到 header 左下角独占一行 */
-            body:not([data-ui-mode]) .weibo-card .item-actions { flex-basis: 100%; order: 99; margin-top: 4px; }
+            /* 点赞/收藏/标签：header 原位隐藏，挪到评论栏上方左下角 */
+            body:not([data-ui-mode]) .head-actions { display: none !important; }
+            body:not([data-ui-mode]) .bottom-actions { display: flex; align-items: center; gap: 6px; padding: 6px 0 2px; }
+            /* 标记缺图：header 里"添加微博"旁显示，底部旧位置随整行隐藏 */
+            body:not([data-ui-mode]) .mark-missing-top { display: inline-flex !important; }
+            body:not([data-ui-mode]) .confirm-row { display: none !important; }
+            /* 上传按钮加号徽章（明显） */
+            body:not([data-ui-mode]) .plus-mark {
+                display: inline-flex; align-items: center; justify-content: center;
+                width: 16px; height: 16px; border-radius: 50%;
+                background: #409eff; color: #fff;
+                font-size: 13px; font-weight: 700; line-height: 1;
+                margin-right: 2px; vertical-align: -2px;
+            }
+            body:not([data-ui-mode]) .plus-mark.plus-video { background: #67c23a; }
             body:not([data-ui-mode]) .weibo-card div[style*="display: flex"]:has(> .el-textarea) { flex-wrap: wrap; }
             body:not([data-ui-mode]) .weibo-card .el-textarea { flex: 1 1 100% !important; }
             body:not([data-ui-mode]) .weibo-card .el-textarea__inner {
@@ -6879,7 +6907,8 @@
                                                     ></el-date-picker>
                                                     <a :href="'https://m.weibo.cn/detail/' + weibo.weiboId" target="_blank" style="margin-left: 4px; color: #409eff; font-size: 13px;">🔗 查看原文</a>
                                                     <el-button type="primary" size="small" link @click="startCrawlFromWeibo(weibo.weiboId)">＋ 添加微博</el-button>
-                                                    <span class="item-actions">
+                                                    <el-button class="mark-missing-top" size="small" link :type="weibo.isImageMissing ? 'danger' : 'warning'" @click.stop="handleToggleWeiboImageMissing(weibo.weiboId)">{{ weibo.isImageMissing ? '✗ 取消缺图' : '标记缺图' }}</el-button>
+                                                    <span class="item-actions head-actions">
                                                         <button type="button" class="interact-btn" :class="{ 'is-active': isLiked('weibo', weibo.weiboId) }" @click.stop="toggleLike('weibo', weibo.weiboId, $event)" title="点赞">❤️</button>
                                                         <button type="button" class="interact-btn" :class="{ 'is-starred': isFavorited('weibo', weibo.weiboId) }" @click.stop="openFavPicker('weibo', weibo.weiboId, $event)" title="收藏到收藏夹">⭐</button>
                                                         <button type="button" class="interact-btn" @click.stop="openTagDialog('weibo', weibo.weiboId, $event)" title="添加标签">🏷️</button>
@@ -6959,6 +6988,7 @@
                                                     <div v-if="weibo.images.length > 0 && weibo.images.every(img => !getImageUrl(img))" style="color: #909399;">图片加载失败</div>
                                                 </div>
                                             </div>
+                                            <div v-else-if="weibo.videos.length === 0" style="color: #909399; margin-bottom: 12px;">暂无图片、视频</div>
                                             <div v-else style="color: #909399; margin-bottom: 12px;">暂无图片</div>
                                             <div style="display: flex; gap: 8px; margin-bottom: 12px;">
                                                 <input
@@ -6969,7 +6999,7 @@
                                                     :ref="el => { if (el) weiboImageUploadRefs[weibo.weiboId] = el; }"
                                                     @change="(e) => handleAddWeiboImage(e, weibo.weiboId)"
                                                 >
-                                                <el-button type="primary" @click="handleClickWeiboUpload(weibo.weiboId)"><span class="btn-emoji">＋🖼️</span><span class="btn-text">上传图片</span></el-button>
+                                                <el-button type="primary" @click="handleClickWeiboUpload(weibo.weiboId)"><span class="btn-emoji"><span class="plus-mark">＋</span>🖼️</span><span class="btn-text">上传图片</span></el-button>
                                                 <input
                                                     type="file"
                                                     accept="video/*"
@@ -6978,7 +7008,7 @@
                                                     :ref="el => { if (el) weiboVideoUploadRefs[weibo.weiboId] = el; }"
                                                     @change="(e) => handleAddWeiboVideo(e, weibo.weiboId)"
                                                 >
-                                                <el-button type="success" @click="handleClickWeiboVideoUpload(weibo.weiboId)"><span class="btn-emoji">＋🎬</span><span class="btn-text">上传视频</span></el-button>
+                                                <el-button type="success" @click="handleClickWeiboVideoUpload(weibo.weiboId)"><span class="btn-emoji"><span class="plus-mark plus-video">＋</span>🎬</span><span class="btn-text">上传视频</span></el-button>
                                             </div>
                                             <div v-if="weibo.videos.length > 0" style="margin-bottom: 12px;">
                                                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -7003,8 +7033,8 @@
                                                     </template>
                                                 </div>
                                             </div>
-                                            <div v-else style="color: #909399; margin-bottom: 12px;">暂无视频</div>
-                                            <div style="display: flex; gap: 8px;">
+                                            <div v-else-if="weibo.images.length > 0" style="color: #909399; margin-bottom: 12px;">暂无视频</div>
+                                            <div class="confirm-row" style="display: flex; gap: 8px;">
                                                 <el-button
                                                     class="confirm-btn"
                                                     :type="weibo.status.isImageConfirmed ? 'success' : 'primary'"
@@ -7032,6 +7062,14 @@
                                                 >
                                                     删除微博
                                                 </el-button>
+                                            </div>
+                                            <div class="bottom-actions">
+                                                <span class="item-actions">
+                                                    <button type="button" class="interact-btn" :class="{ 'is-active': isLiked('weibo', weibo.weiboId) }" @click.stop="toggleLike('weibo', weibo.weiboId, $event)" title="点赞">❤️</button>
+                                                    <button type="button" class="interact-btn" :class="{ 'is-starred': isFavorited('weibo', weibo.weiboId) }" @click.stop="openFavPicker('weibo', weibo.weiboId, $event)" title="收藏到收藏夹">⭐</button>
+                                                    <button type="button" class="interact-btn" @click.stop="openTagDialog('weibo', weibo.weiboId, $event)" title="添加标签">🏷️</button>
+                                                    <span v-for="t in tagsOf('weibo', weibo.weiboId)" :key="'b' + t.id" class="user-tag" :style="{ background: t.color }">{{ t.name }}</span>
+                                                </span>
                                             </div>
                                                 </div>
                                             </div>
