@@ -454,10 +454,61 @@
             margin-right: 2px; vertical-align: -2px;
         }
         .plus-mark.plus-video { background: #67c23a; }
+
+        /* ===== 合并图/视频 media-strip ===== */
+        .media-thumb { position: relative; flex-shrink: 0; overflow: visible; }
+        .media-video { overflow: visible; }
+        .thumb-del {
+            position: absolute; top: -8px; right: -8px;
+            width: 22px; height: 22px; padding: 0; font-size: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.2);
+        }
+        .stack-badge {
+            position: absolute; bottom: 2px; right: 2px;
+            background: rgba(0,0,0,.65); color: #fff;
+            font-size: 12px; font-weight: 700;
+            padding: 2px 6px; border-radius: 4px; line-height: 1;
+            pointer-events: none;
+        }
+        /* ④页 profile 外层 tabs（默认隐藏，手机端显示） */
+        .profile-top-tabs { display: none; }
+        .profile-pane-account, .profile-pane-fav { }
+        /* 手机端：外层 tab 切换器显示，pane 按 tab 显示/隐藏 */
+        body.mode-mobile .profile-top-tabs {
+            display: flex; gap: 0; margin-bottom: 12px;
+            border-bottom: 2px solid #ebeef5;
+        }
+        body.mode-mobile .pt-tab {
+            flex: 1; padding: 10px 0; border: none; background: transparent;
+            font-size: 15px; color: #909399; cursor: pointer; position: relative;
+        }
+        body.mode-mobile .pt-tab.active {
+            color: #409eff; font-weight: 600;
+        }
+        body.mode-mobile .pt-tab.active::after {
+            content: ''; position: absolute; bottom: -2px; left: 20%; right: 20%;
+            height: 2px; background: #409eff; border-radius: 2px;
+        }
+        body.mode-mobile .profile-pane-account,
+        body.mode-mobile .profile-pane-fav { display: none; }
+        body.mode-mobile .profile-pane-account.active-pane,
+        body.mode-mobile .profile-pane-fav.active-pane { display: block; }
+        /* 桌面端尺寸 */
+        .media-thumb { width: 100px; height: 100px; border-radius: 8px; }
+        .thumb-img { width: 100px !important; height: 100px !important; cursor: zoom-in; border-radius: 8px; object-fit: cover; display: block; }
+        .media-video { width: 160px; height: 100px; }
+        .thumb-video { width: 160px !important; height: 100px; border-radius: 8px; display: block; background: #000; }
+        /* 手机端尺寸缩小 */
+        body.mode-mobile .media-thumb { width: 72px; height: 72px; border-radius: 6px; }
+        body.mode-mobile .thumb-img { width: 72px !important; height: 72px !important; border-radius: 6px; }
+        body.mode-mobile .media-video { width: 120px; height: 72px; }
+        body.mode-mobile .thumb-video { width: 120px !important; height: 72px; border-radius: 6px; }
         /* ④页收藏夹折叠标题：窄屏允许换行，名称/条数不被压缩折断 */
-        body.mode-mobile .folder-title-bar { flex-wrap: wrap; row-gap: 4px; }
+        body.mode-mobile .folder-title-bar { display: flex; flex-wrap: wrap; row-gap: 4px; min-width: 0; padding-right: 0; }
         body.mode-mobile .folder-title-bar > span { white-space: nowrap; flex: none; }
-        body.mode-mobile .folder-title-actions { flex-basis: 100%; margin-left: 0; }
+        body.mode-mobile .folder-title-bar > b { white-space: nowrap; flex: none; }
+        body.mode-mobile .folder-title-bar .el-tag { white-space: nowrap; }
+        body.mode-mobile .folder-title-actions { flex-basis: 100%; margin-left: 0; justify-content: flex-end; }
         /* 原文文本框：独占整行拉长，emoji 键移到下一行 */
         body.mode-mobile .weibo-card div[style*="display: flex"]:has(> .el-textarea) { flex-wrap: wrap; }
         body.mode-mobile .weibo-card .el-textarea { flex: 1 1 100% !important; }
@@ -583,6 +634,11 @@
             /* 原文卡片与屏幕等宽 */
             body:not([data-ui-mode]) .weibo-card { width: 100vw; margin-left: calc(50% - 50vw); }
             body:not([data-ui-mode]) .weibo-card .el-card { border-radius: 0; }
+            /* 手机端尺寸缩小 */
+            body:not([data-ui-mode]) .media-thumb { width: 72px; height: 72px; border-radius: 6px; }
+            body:not([data-ui-mode]) .thumb-img { width: 72px !important; height: 72px !important; border-radius: 6px; }
+            body:not([data-ui-mode]) .media-video { width: 120px; height: 72px; }
+            body:not([data-ui-mode]) .thumb-video { width: 120px !important; height: 72px; border-radius: 6px; }
             /* 顶部工具行与正文拉开距离 */
             body:not([data-ui-mode]) .list-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-bottom: 14px; }
             body:not([data-ui-mode]) .list-toolbar > div { float: none !important; }
@@ -606,10 +662,30 @@
                 margin-right: 2px; vertical-align: -2px;
             }
             body:not([data-ui-mode]) .plus-mark.plus-video { background: #67c23a; }
+            /* ④页 profile 外层 tabs 显示 */
+            body:not([data-ui-mode]) .profile-top-tabs {
+                display: flex; gap: 0; margin-bottom: 12px;
+                border-bottom: 2px solid #ebeef5;
+            }
+            body:not([data-ui-mode]) .pt-tab {
+                flex: 1; padding: 10px 0; border: none; background: transparent;
+                font-size: 15px; color: #909399; cursor: pointer; position: relative;
+            }
+            body:not([data-ui-mode]) .pt-tab.active { color: #409eff; font-weight: 600; }
+            body:not([data-ui-mode]) .pt-tab.active::after {
+                content: ''; position: absolute; bottom: -2px; left: 20%; right: 20%;
+                height: 2px; background: #409eff; border-radius: 2px;
+            }
+            body:not([data-ui-mode]) .profile-pane-account,
+            body:not([data-ui-mode]) .profile-pane-fav { display: none; }
+            body:not([data-ui-mode]) .profile-pane-account.active-pane,
+            body:not([data-ui-mode]) .profile-pane-fav.active-pane { display: block; }
             /* ④页收藏夹折叠标题：窄屏允许换行，名称/条数不被压缩折断 */
-            body:not([data-ui-mode]) .folder-title-bar { flex-wrap: wrap; row-gap: 4px; }
+            body:not([data-ui-mode]) .folder-title-bar { display: flex; flex-wrap: wrap; row-gap: 4px; min-width: 0; padding-right: 0; }
             body:not([data-ui-mode]) .folder-title-bar > span { white-space: nowrap; flex: none; }
-            body:not([data-ui-mode]) .folder-title-actions { flex-basis: 100%; margin-left: 0; }
+            body:not([data-ui-mode]) .folder-title-bar > b { white-space: nowrap; flex: none; }
+            body:not([data-ui-mode]) .folder-title-bar .el-tag { white-space: nowrap; }
+            body:not([data-ui-mode]) .folder-title-actions { flex-basis: 100%; margin-left: 0; justify-content: flex-end; }
             body:not([data-ui-mode]) .weibo-card div[style*="display: flex"]:has(> .el-textarea) { flex-wrap: wrap; }
             body:not([data-ui-mode]) .weibo-card .el-textarea { flex: 1 1 100% !important; }
             body:not([data-ui-mode]) .weibo-card .el-textarea__inner {
@@ -1064,6 +1140,7 @@
                 history: { browse: [], search: [] }
             },
             profileTab: 'favorites',
+            profileTopTab: 'fav',   // 手机端外层 tab: 'fav'(收藏) / 'account'(账号+备份)
             folderDialogVisible: false,
             folderForm: { id: '', name: '', type: 'mixed' },
             favPickerVisible: false,
@@ -6965,34 +7042,34 @@
                                             <div v-if="$extractUrls(weibo.content).length > 0" style="margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
                                                 <a v-for="(u, uidx) in $extractUrls(weibo.content)" :key="uidx" :href="u" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #409eff; text-decoration: underline; word-break: break-all;">🔗{{ u }}</a>
                                             </div>
-                                            <div v-if="weibo.images.length > 0" style="margin-bottom: 12px;">
-                                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                                    <template v-for="(img, idx) in weibo.images" :key="idx">
-                                                        <div v-if="getImageUrl(img)" style="position: relative;">
-                                                            <el-image
-                                                                :src="getImageUrl(img)"
-                                                                :preview-src-list="weibo.images.map(i => getImageUrl(i)).filter(Boolean)"
-                                                                :initial-index="idx"
-                                                                preview-teleported
-                                                                style="width: 100px; height: 100px; cursor: zoom-in;"
-                                                                fit="cover"
-                                                            ></el-image>
-                                                            <el-button 
-                                                                type="danger" 
-                                                                size="small" 
-                                                                circle 
-                                                                style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; padding: 0; font-size: 12px;"
-                                                                @click="handleRemoveWeiboImage(weibo.weiboId, idx)"
-                                                            >
-                                                                ×
-                                                            </el-button>
-                                                        </div>
-                                                    </template>
-                                                    <div v-if="weibo.images.length > 0 && weibo.images.every(img => !getImageUrl(img))" style="color: #909399;">图片加载失败</div>
+                                            <!-- 合并：图片 + 视频 一行平铺，超限叠加 "+N" -->
+                                            <div class="media-strip" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: flex-start;">
+                                                <!-- 图片：最多 3 张平铺，第 4 张起叠 "+N" -->
+                                                <template v-for="(img, idx) in weibo.images.slice(0, 3)" :key="'i'+idx">
+                                                    <div v-if="getImageUrl(img)" class="media-thumb">
+                                                        <el-image
+                                                            :src="getImageUrl(img)"
+                                                            :preview-src-list="weibo.images.map(i => getImageUrl(i)).filter(Boolean)"
+                                                            :initial-index="idx"
+                                                            preview-teleported
+                                                            class="thumb-img"
+                                                            fit="cover"
+                                                        ></el-image>
+                                                        <span v-if="idx === 2 && weibo.images.length > 3" class="stack-badge">+{{ weibo.images.length - 3 }}</span>
+                                                        <el-button type="danger" size="small" circle class="thumb-del" @click="handleRemoveWeiboImage(weibo.weiboId, idx)">×</el-button>
+                                                    </div>
+                                                </template>
+                                                <!-- 视频：最多 1 个平铺，第 2 个起叠 "+N" -->
+                                                <div v-if="weibo.videos.length > 0 && getVideoUrl(weibo.videos[0])" class="media-thumb media-video">
+                                                    <video :src="getVideoUrl(weibo.videos[0])" class="thumb-video" controls preload="metadata"></video>
+                                                    <span v-if="weibo.videos.length > 1" class="stack-badge">+{{ weibo.videos.length - 1 }}</span>
+                                                    <el-button type="danger" size="small" circle class="thumb-del" @click="handleRemoveWeiboVideo(weibo.weiboId, 0)">×</el-button>
                                                 </div>
+                                                <!-- 空提示 -->
+                                                <div v-if="weibo.images.length === 0 && weibo.videos.length === 0" style="color: #909399;">暂无图片、视频</div>
+                                                <div v-else-if="weibo.images.length > 0 && weibo.videos.length === 0" style="color: #909399; width: 100%;">暂无视频</div>
+                                                <div v-else-if="weibo.images.length === 0 && weibo.videos.length > 0" style="color: #909399; width: 100%;">暂无图片</div>
                                             </div>
-                                            <div v-else-if="weibo.videos.length === 0" style="color: #909399; margin-bottom: 12px;">暂无图片、视频</div>
-                                            <div v-else style="color: #909399; margin-bottom: 12px;">暂无图片</div>
                                             <div style="display: flex; gap: 8px; margin-bottom: 12px;">
                                                 <input
                                                     type="file"
@@ -7559,6 +7636,14 @@
 
                         <!-- ⑤ 个人中心 -->
                         <div v-if="appState.currentPage === 'profile'">
+                            <!-- 手机端外层 tab 切换（收藏/账号） -->
+                            <div class="profile-top-tabs">
+                                <button class="pt-tab" :class="{active: appState.profileTopTab === 'fav'}" @click="appState.profileTopTab = 'fav'">⭐ 收藏</button>
+                                <button class="pt-tab" :class="{active: appState.profileTopTab === 'account'}" @click="appState.profileTopTab = 'account'">👤 账号</button>
+                            </div>
+
+                            <!-- 账号/备份/导入/须知（手机端在"账号"tab，桌面端始终显示） -->
+                            <div :class="['profile-pane-account', { 'active-pane': appState.profileTopTab === 'account' }]">
                             <el-card style="margin-bottom: 16px;">
                                 <div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
                                     <div style="text-align: center;">
@@ -7586,7 +7671,10 @@
                                     </div>
                                 </div>
                             </el-card>
+                            </div><!-- profile-pane-account 结束 -->
 
+                            <!-- 收藏/点赞/标签（手机端在"收藏"tab，桌面端始终显示） -->
+                            <div :class="['profile-pane-fav', { 'active-pane': appState.profileTopTab === 'fav' }]">
                             <el-tabs v-model="appState.profileTab" type="border-card">
                                 <!-- 收藏夹 -->
                                 <el-tab-pane name="favorites">
@@ -7738,7 +7826,10 @@
                                     </div>
                                 </el-tab-pane>
                             </el-tabs>
+                            </div><!-- profile-pane-fav 结束 -->
 
+                            <!-- 备份/导入/须知 属于"账号"tab -->
+                            <div :class="['profile-pane-account', { 'active-pane': appState.profileTopTab === 'account' }]">
                             <el-card style="margin-top: 16px;">
                                 <template #header><div class="card-header">📦 备份与换机恢复</div></template>
                                 <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
@@ -7774,6 +7865,7 @@
                                 <span style="cursor:default;user-select:none;" @click="toggleAdminMode">微博收藏助手 v2.0</span>
                                 <span v-if="appState.adminMode" style="margin-left:8px;color:#f56c6c;">管理员模式</span>
                             </div>
+                            </div><!-- profile-pane-account 结束 -->
                         </div>
                         </div>
 
