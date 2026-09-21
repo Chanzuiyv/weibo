@@ -3886,44 +3886,30 @@
                     }
                 }
 
-                // ===== 统一媒体全屏预览：把图片 + 视频拼成一个 items 数组，点任意缩略图都能打开 =====
+                // ===== 媒体全屏预览：点图片只看图片、点视频只播视频 =====
                 function openMediaPreview(weibo, clickIdx, clickType) {
                     const items = [];
-                    (weibo.images || []).forEach((img, i) => {
-                        const url = getImageUrl(img);
-                        if (url) items.push({ type: 'image', url, idx: i, kind: 'weiboImage', weiboId: weibo.weiboId });
-                    });
-                    (weibo.videos || []).forEach((v, i) => {
-                        let url = getVideoUrl(v);
-                        if (!url && v) {
-                            const mi = v.media_info || (typeof v === 'object' && v);
-                            if (mi) url = mi.stream_url_hd || mi.stream_url || v.url || v.blobUrl || '';
-                        }
-                        if (url) items.push({ type: 'video', url, idx: i, kind: 'weiboVideo', weiboId: weibo.weiboId });
-                    });
-                    if (!items.length) return;
-                    // 找到点击项在合并列表里的位置
-                    let pos = 0;
                     if (clickType === 'image') {
-                        // 找 images 数组里第 clickIdx 个非空图片
-                        let c = 0;
-                        for (let i = 0; i < items.length; i++) {
-                            if (items[i].type === 'image') {
-                                if (c === clickIdx) { pos = i; break; }
-                                c++;
-                            }
-                        }
+                        (weibo.images || []).forEach((img, i) => {
+                            const url = getImageUrl(img);
+                            if (url) items.push({ type: 'image', url, idx: i });
+                        });
                     } else {
-                        let c = 0;
-                        for (let i = 0; i < items.length; i++) {
-                            if (items[i].type === 'video') {
-                                if (c === clickIdx) { pos = i; break; }
-                                c++;
+                        (weibo.videos || []).forEach((v, i) => {
+                            let url = getVideoUrl(v);
+                            if (!url && v) {
+                                const mi = v.media_info || (typeof v === 'object' && v);
+                                if (mi) url = mi.stream_url_hd || mi.stream_url || v.url || v.blobUrl || '';
                             }
-                        }
+                            if (url) items.push({ type: 'video', url, idx: i });
+                        });
                     }
+                    if (!items.length) return;
+                    // 找到点击项在列表里的位置
+                    let pos = Math.min(clickIdx, items.length - 1);
                     appState.mediaPreview.items = items;
                     appState.mediaPreview.index = pos;
+                    appState.mediaPreview.prevIdx = pos;
                     appState.mediaPreview.visible = true;
                 }
                 function closeMediaPreview() { appState.mediaPreview.visible = false; }
