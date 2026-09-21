@@ -290,6 +290,140 @@
             background: #fdf6ec;
             min-height: 60px;
         }
+
+        /* ===== 移动端适配 ===== */
+        /* 自动模式：<=768px 或用户手动切到移动端时生效 */
+        body.mode-mobile .sidebar {
+            position: fixed;
+            left: 0; right: 0; bottom: 0; top: auto;
+            width: 100%;
+            height: auto;
+            flex-direction: row;
+            justify-content: space-around;
+            align-items: center;
+            padding: 8px 10px;
+            gap: 2px;
+            box-shadow: 0 -2px 12px rgba(0,0,0,0.12);
+        }
+        body.mode-mobile .sidebar-btn {
+            width: 36px; height: 36px;
+            font-size: 16px;
+            margin-bottom: 0;
+            flex-shrink: 0;
+        }
+        body.mode-mobile .sidebar-profile-btn { width: 36px; height: 36px; }
+        body.mode-mobile .sidebar-avatar-img { width: 24px; height: 24px; }
+        body.mode-mobile .sidebar > div[style*="flex: 1"] { display: none; }
+        body.mode-mobile .main-content {
+            margin-left: 0;
+            padding: 12px 12px 80px 12px;
+            max-width: 100%;
+        }
+        body.mode-mobile .header-bar {
+            padding: 10px 14px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        body.mode-mobile .header-title { font-size: 16px; }
+        body.mode-mobile .header-info { gap: 10px; flex-wrap: wrap; font-size: 13px; }
+        body.mode-mobile .stats-card { padding: 12px; font-size: 13px; }
+        body.mode-mobile .weibo-card-actions,
+        body.mode-mobile .card-actions-row {
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        body.mode-mobile .weibo-card-actions button,
+        body.mode-mobile .card-actions-row button {
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+        body.mode-mobile input[type="text"],
+        body.mode-mobile input[type="date"],
+        body.mode-mobile select,
+        body.mode-mobile textarea {
+            max-width: 100% !important;
+            width: 100% !important;
+        }
+        body.mode-mobile img.video-preview,
+        body.mode-mobile video.video-preview,
+        body.mode-mobile img.media-img,
+        body.mode-mobile .weibo-card img,
+        body.mode-mobile .weibo-card video {
+            max-width: 100%;
+            height: auto;
+        }
+        body.mode-mobile .comment-panel { padding: 8px; }
+        body.mode-mobile .comment-panel-header { padding: 6px 10px; font-size: 13px; }
+        body.mode-mobile .avatar-ring { width: 70px; height: 70px; padding: 2px; }
+        body.mode-mobile .profile-avatar { width: 64px; height: 64px; }
+
+        /* 自动响应式（没有手动切换过时，按屏幕宽度判断） */
+        @media (max-width: 768px) {
+            body:not([data-ui-mode]) .sidebar {
+                position: fixed;
+                left: 0; right: 0; bottom: 0; top: auto;
+                width: 100%; height: auto;
+                flex-direction: row;
+                justify-content: space-around;
+                align-items: center;
+                padding: 8px 10px; gap: 2px;
+                box-shadow: 0 -2px 12px rgba(0,0,0,0.12);
+            }
+            body:not([data-ui-mode]) .sidebar-btn {
+                width: 36px; height: 36px; font-size: 16px;
+                margin-bottom: 0; flex-shrink: 0;
+            }
+            body:not([data-ui-mode]) .sidebar-profile-btn { width: 36px; height: 36px; }
+            body:not([data-ui-mode]) .sidebar-avatar-img { width: 24px; height: 24px; }
+            body:not([data-ui-mode]) .sidebar > div[style*="flex: 1"] { display: none; }
+            body:not([data-ui-mode]) .main-content {
+                margin-left: 0;
+                padding: 12px 12px 80px 12px;
+                max-width: 100%;
+            }
+            body:not([data-ui-mode]) .header-bar {
+                padding: 10px 14px; flex-wrap: wrap; gap: 8px;
+            }
+            body:not([data-ui-mode]) .header-title { font-size: 16px; }
+            body:not([data-ui-mode]) .header-info { gap: 10px; flex-wrap: wrap; font-size: 13px; }
+            body:not([data-ui-mode]) .stats-card { padding: 12px; font-size: 13px; }
+            body:not([data-ui-mode]) .weibo-card-actions,
+            body:not([data-ui-mode]) .card-actions-row { flex-wrap: wrap; gap: 6px; }
+            body:not([data-ui-mode]) .weibo-card-actions button,
+            body:not([data-ui-mode]) .card-actions-row button {
+                padding: 6px 10px; font-size: 12px;
+            }
+            body:not([data-ui-mode]) input[type="text"],
+            body:not([data-ui-mode]) input[type="date"],
+            body:not([data-ui-mode]) select,
+            body:not([data-ui-mode]) textarea {
+                max-width: 100% !important; width: 100% !important;
+            }
+            body:not([data-ui-mode]) img.video-preview,
+            body:not([data-ui-mode]) video.video-preview,
+            body:not([data-ui-mode]) img.media-img,
+            body:not([data-ui-mode]) .weibo-card img,
+            body:not([data-ui-mode]) .weibo-card video {
+                max-width: 100%; height: auto;
+            }
+            body:not([data-ui-mode]) .comment-panel { padding: 8px; }
+            body:not([data-ui-mode]) .comment-panel-header { padding: 6px 10px; font-size: 13px; }
+            body:not([data-ui-mode]) .avatar-ring { width: 70px; height: 70px; padding: 2px; }
+            body:not([data-ui-mode]) .profile-avatar { width: 64px; height: 64px; }
+        }
+
+        /* UI 切换按钮 */
+        .ui-mode-toggle {
+            border: none; background: rgba(255,255,255,0.3);
+            color: white; font-size: 14px; cursor: pointer;
+            padding: 4px 10px; border-radius: 14px;
+            transition: background .2s; margin-left: 8px;
+        }
+        .ui-mode-toggle:hover { background: rgba(255,255,255,0.5); }
+        .header-bar .ui-mode-toggle {
+            background: #ecf5ff; color: #409eff;
+        }
+        .header-bar .ui-mode-toggle:hover { background: #d9ecff; }
     </style>
 </head>
 <body>
@@ -5763,6 +5897,44 @@
                     return list;
                 });
 
+                // ===== UI 模式切换（PC / 移动端） =====
+                const uiMode = ref('auto'); // 'auto' | 'pc' | 'mobile'
+                const uiModeIcon = computed(() => uiMode.value === 'mobile' ? '🖥️' : '📱');
+                const uiModeLabel = computed(() => {
+                    if (uiMode.value === 'mobile') return '电脑端';
+                    if (uiMode.value === 'pc') return '移动端';
+                    return '切换端';
+                });
+                const toggleUIMode = () => {
+                    // 循环: auto → pc → mobile → auto
+                    if (uiMode.value === 'auto') {
+                        uiMode.value = 'pc';
+                    } else if (uiMode.value === 'pc') {
+                        uiMode.value = 'mobile';
+                    } else {
+                        uiMode.value = 'auto';
+                    }
+                    applyUIMode();
+                    localStorage.setItem('weibo_ui_mode', uiMode.value);
+                    showToast(
+                        uiMode.value === 'auto' ? '已恢复自动适配' :
+                        uiMode.value === 'pc' ? '已切换电脑端 UI' : '已切换移动端 UI',
+                        'success'
+                    );
+                };
+                const applyUIMode = () => {
+                    const body = document.body;
+                    body.removeAttribute('data-ui-mode');
+                    body.classList.remove('mode-mobile');
+                    if (uiMode.value === 'mobile') {
+                        body.setAttribute('data-ui-mode', 'mobile');
+                        body.classList.add('mode-mobile');
+                    } else if (uiMode.value === 'pc') {
+                        body.setAttribute('data-ui-mode', 'pc');
+                    }
+                    // auto 模式不加 data-ui-mode，让 @media 查询接管
+                };
+
                 // 管理员模式：在个人中心连续点击 5 次版本号开启
                 let adminClickCount = 0, adminClickTimer = null;
                 const toggleAdminMode = () => {
@@ -5779,6 +5951,13 @@
 
                 onMounted(async () => {
                     normalizeCommentSources();
+
+                    // 恢复 UI 模式偏好（localStorage）
+                    const savedMode = localStorage.getItem('weibo_ui_mode');
+                    if (savedMode && ['auto', 'pc', 'mobile'].includes(savedMode)) {
+                        uiMode.value = savedMode;
+                    }
+                    applyUIMode();
 
                     // 首次启动：风险告知书（未同意则不进入任何工作区）
                     appState.riskAccepted = localStorage.getItem('weibo_risk_accepted') === '1';
@@ -5894,6 +6073,10 @@
                     openFeedback,
                     openCommunity,
                     sidebarPages,
+                    uiMode,
+                    uiModeIcon,
+                    uiModeLabel,
+                    toggleUIMode,
                     artistSearchResults,
                     canCreateArtist,
                     selectArtist,
@@ -6249,6 +6432,9 @@
                                 >
                                     操作指南
                                 </el-button>
+                                <button class="ui-mode-toggle" @click="toggleUIMode" :title="uiModeLabel">
+                                    {{ uiModeIcon }} {{ uiModeLabel }}
+                                </button>
                             </div>
                         </div>
 
