@@ -498,14 +498,14 @@
         body.mode-mobile .profile-pane-fav.active-pane { display: block; }
         /* 桌面端尺寸 */
         .media-thumb { width: 100px; height: 100px; border-radius: 8px; }
-        .thumb-img { width: 100px !important; height: 100px !important; cursor: zoom-in; border-radius: 8px; object-fit: cover; display: block; }
-        .media-video { width: 160px; height: 100px; }
-        .thumb-video { width: 160px !important; height: 100px; border-radius: 8px; display: block; background: #000; }
+        .thumb-img { width: 100px !important; height: 100px !important; cursor: zoom-in; border-radius: 8px; object-fit: cover; display: block; overflow: hidden; }
+        .media-video { width: 160px; height: 100px; aspect-ratio: 16/10; overflow: hidden; border-radius: 8px; }
+        .thumb-video { width: 160px !important; height: 100px; border-radius: 8px; display: block; background: #000; object-fit: cover; overflow: hidden; }
         /* 手机端尺寸缩小 */
         body.mode-mobile .media-thumb { width: 72px; height: 72px; border-radius: 6px; }
-        body.mode-mobile .thumb-img { width: 72px !important; height: 72px !important; border-radius: 6px; }
-        body.mode-mobile .media-video { width: 120px; height: 72px; }
-        body.mode-mobile .thumb-video { width: 120px !important; height: 72px; border-radius: 6px; }
+        body.mode-mobile .thumb-img { width: 72px !important; height: 72px !important; border-radius: 6px; overflow: hidden; }
+        body.mode-mobile .media-video { width: 120px; height: 72px; aspect-ratio: 16/10; overflow: hidden; border-radius: 6px; }
+        body.mode-mobile .thumb-video { width: 120px !important; height: 72px; border-radius: 6px; object-fit: cover; overflow: hidden; }
         /* 收藏夹展开区的第二套按钮，手机端隐藏（折叠头已有一套） */
         body.mode-mobile .folder-expanded-actions { display: none !important; }
 
@@ -681,9 +681,9 @@
             body:not([data-ui-mode]) .weibo-card .el-card { border-radius: 0; }
             /* 手机端尺寸缩小 */
             body:not([data-ui-mode]) .media-thumb { width: 72px; height: 72px; border-radius: 6px; }
-            body:not([data-ui-mode]) .thumb-img { width: 72px !important; height: 72px !important; border-radius: 6px; }
-            body:not([data-ui-mode]) .media-video { width: 120px; height: 72px; }
-            body:not([data-ui-mode]) .thumb-video { width: 120px !important; height: 72px; border-radius: 6px; }
+            body:not([data-ui-mode]) .thumb-img { width: 72px !important; height: 72px !important; border-radius: 6px; overflow: hidden; }
+            body:not([data-ui-mode]) .media-video { width: 120px; height: 72px; aspect-ratio: 16/10; overflow: hidden; border-radius: 6px; }
+            body:not([data-ui-mode]) .thumb-video { width: 120px !important; height: 72px; border-radius: 6px; object-fit: cover; overflow: hidden; }
             body:not([data-ui-mode]) .folder-expanded-actions { display: none !important; }
             /* 手机端文本编辑框字号调小 */
             body:not([data-ui-mode]) .weibo-content-input textarea,
