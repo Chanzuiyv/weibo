@@ -516,7 +516,11 @@
         body.mode-mobile .thumb-video { width: 120px !important; height: 72px; border-radius: 6px; object-fit: cover; overflow: hidden; }
         body.mode-mobile .video-play-icon { font-size: 20px; width: 32px; height: 32px; padding-left: 2px; }
         body.mode-mobile .video-fs-btn { width: 22px; height: 22px; font-size: 12px; bottom: 3px; right: 3px; }
-        /* 收藏夹展开区的第二套按钮，手机端隐藏（折叠头已有一套） */
+        body.mode-mobile .folder-expanded-actions { display: none !important; }
+        @media (max-width: 768px) {
+            .folder-expanded-actions { display: none !important; }
+            .folder-pick-row { padding: 10px 12px !important; font-size: 13px; }
+        }
         /* 手机端 Dialog 全宽适配（覆盖 Element Plus 默认 420px 固定宽度） */
         body.mode-mobile .el-dialog { width: 94% !important; max-width: 94vw !important; margin: 4vh auto !important; }
         body.mode-mobile .el-dialog__body { padding: 14px 16px !important; font-size: 13px; }
@@ -3958,11 +3962,19 @@
                     if (!wrap) return;
                     const video = wrap.querySelector('video');
                     if (!video) return;
+                    // 保存当前滚动位置（iOS Safari 全屏切换会把页面滚回顶部）
+                    const savedScroll = { x: window.scrollX, y: window.scrollY };
+                    const restoreScroll = () => {
+                        window.removeEventListener('fullscreenchange', restoreScroll);
+                        window.removeEventListener('webkitfullscreenchange', restoreScroll);
+                        setTimeout(() => window.scrollTo(savedScroll.x, savedScroll.y), 100);
+                    };
+                    window.addEventListener('fullscreenchange', restoreScroll);
+                    window.addEventListener('webkitfullscreenchange', restoreScroll);
                     try {
                         if (video.requestFullscreen) { video.requestFullscreen(); return; }
                         if (video.webkitRequestFullscreen) { video.webkitRequestFullscreen(); return; }
                         if (video.webkitEnterFullscreen) { video.webkitEnterFullscreen(); return; }
-                        // iOS Safari 降级：跳到全屏页
                         video.controls = true;
                         video.play().catch(()=>{});
                     } catch(e) { console.warn('fullscreen fail', e); }
