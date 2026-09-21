@@ -504,7 +504,9 @@
         /* 视频自定义覆盖层（中间▶️ + 右下角⛶ 全屏） */
         .video-wrap { position: relative; }
         .video-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; background: rgba(0,0,0,.25); border-radius: 8px; transition: opacity .2s; }
-        .video-overlay.hide { opacity: 0; pointer-events: none; }
+        .video-overlay.hide { opacity: 0.35; }
+        .video-overlay.hide .video-play-icon { display: none; }
+        .video-overlay.hide .video-fs-btn { opacity: 1; }
         .video-play-icon { color: #fff; font-size: 28px; width: 42px; height: 42px; border-radius: 50%; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; line-height: 1; padding-left: 3px; }
         .video-fs-btn { position: absolute; bottom: 4px; right: 4px; width: 26px; height: 26px; border: none; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; font-size: 14px; cursor: pointer; line-height: 1; padding: 0; }
         /* 手机端尺寸缩小 */
@@ -515,7 +517,14 @@
         body.mode-mobile .video-play-icon { font-size: 20px; width: 32px; height: 32px; padding-left: 2px; }
         body.mode-mobile .video-fs-btn { width: 22px; height: 22px; font-size: 12px; bottom: 3px; right: 3px; }
         /* 收藏夹展开区的第二套按钮，手机端隐藏（折叠头已有一套） */
-        body.mode-mobile .folder-expanded-actions { display: none !important; }
+        /* 手机端 Dialog 全宽适配（覆盖 Element Plus 默认 420px 固定宽度） */
+        body.mode-mobile .el-dialog { width: 94% !important; max-width: 94vw !important; margin: 4vh auto !important; }
+        body.mode-mobile .el-dialog__body { padding: 14px 16px !important; font-size: 13px; }
+        body.mode-mobile .el-dialog__header { padding: 14px 16px 8px !important; }
+        body.mode-mobile .el-dialog__title { font-size: 15px; }
+        body.mode-mobile .el-dialog__footer { padding: 10px 16px 14px !important; }
+        body.mode-mobile .el-dialog .el-button { font-size: 13px; padding: 8px 14px; }
+        body.mode-mobile .folder-pick-row { padding: 10px 12px !important; font-size: 13px; }
 
         /* 手机端文本编辑框字号调小 */
         body.mode-mobile .weibo-content-input textarea,
@@ -695,6 +704,13 @@
             body:not([data-ui-mode]) .video-play-icon { font-size: 20px; width: 32px; height: 32px; padding-left: 2px; }
             body:not([data-ui-mode]) .video-fs-btn { width: 22px; height: 22px; font-size: 12px; bottom: 3px; right: 3px; }
             body:not([data-ui-mode]) .folder-expanded-actions { display: none !important; }
+            body:not([data-ui-mode]) .el-dialog { width: 94% !important; max-width: 94vw !important; margin: 4vh auto !important; }
+            body:not([data-ui-mode]) .el-dialog__body { padding: 14px 16px !important; font-size: 13px; }
+            body:not([data-ui-mode]) .el-dialog__header { padding: 14px 16px 8px !important; }
+            body:not([data-ui-mode]) .el-dialog__title { font-size: 15px; }
+            body:not([data-ui-mode]) .el-dialog__footer { padding: 10px 16px 14px !important; }
+            body:not([data-ui-mode]) .el-dialog .el-button { font-size: 13px; padding: 8px 14px; }
+            body:not([data-ui-mode]) .folder-pick-row { padding: 10px 12px !important; font-size: 13px; }
             /* 手机端文本编辑框字号调小 */
             body:not([data-ui-mode]) .weibo-content-input textarea,
             body:not([data-ui-mode]) textarea.weibo-text-edit,
