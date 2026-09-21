@@ -499,13 +499,21 @@
         /* 桌面端尺寸 */
         .media-thumb { width: 100px; height: 100px; border-radius: 8px; }
         .thumb-img { width: 100px !important; height: 100px !important; cursor: zoom-in; border-radius: 8px; object-fit: cover; display: block; overflow: hidden; }
-        .media-video { width: 160px; height: 100px; aspect-ratio: 16/10; overflow: hidden; border-radius: 8px; }
+        .media-video { width: 160px; height: 100px; aspect-ratio: 16/10; overflow: hidden; border-radius: 8px; position: relative; }
         .thumb-video { width: 160px !important; height: 100px; border-radius: 8px; display: block; background: #000; object-fit: cover; overflow: hidden; }
+        /* 视频自定义覆盖层（中间▶️ + 右下角⛶ 全屏） */
+        .video-wrap { position: relative; }
+        .video-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; background: rgba(0,0,0,.25); border-radius: 8px; transition: opacity .2s; }
+        .video-overlay.hide { opacity: 0; pointer-events: none; }
+        .video-play-icon { color: #fff; font-size: 28px; width: 42px; height: 42px; border-radius: 50%; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; line-height: 1; padding-left: 3px; }
+        .video-fs-btn { position: absolute; bottom: 4px; right: 4px; width: 26px; height: 26px; border: none; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; font-size: 14px; cursor: pointer; line-height: 1; padding: 0; }
         /* 手机端尺寸缩小 */
         body.mode-mobile .media-thumb { width: 72px; height: 72px; border-radius: 6px; }
         body.mode-mobile .thumb-img { width: 72px !important; height: 72px !important; border-radius: 6px; overflow: hidden; }
         body.mode-mobile .media-video { width: 120px; height: 72px; aspect-ratio: 16/10; overflow: hidden; border-radius: 6px; }
         body.mode-mobile .thumb-video { width: 120px !important; height: 72px; border-radius: 6px; object-fit: cover; overflow: hidden; }
+        body.mode-mobile .video-play-icon { font-size: 20px; width: 32px; height: 32px; padding-left: 2px; }
+        body.mode-mobile .video-fs-btn { width: 22px; height: 22px; font-size: 12px; bottom: 3px; right: 3px; }
         /* 收藏夹展开区的第二套按钮，手机端隐藏（折叠头已有一套） */
         body.mode-mobile .folder-expanded-actions { display: none !important; }
 
@@ -684,6 +692,8 @@
             body:not([data-ui-mode]) .thumb-img { width: 72px !important; height: 72px !important; border-radius: 6px; overflow: hidden; }
             body:not([data-ui-mode]) .media-video { width: 120px; height: 72px; aspect-ratio: 16/10; overflow: hidden; border-radius: 6px; }
             body:not([data-ui-mode]) .thumb-video { width: 120px !important; height: 72px; border-radius: 6px; object-fit: cover; overflow: hidden; }
+            body:not([data-ui-mode]) .video-play-icon { font-size: 20px; width: 32px; height: 32px; padding-left: 2px; }
+            body:not([data-ui-mode]) .video-fs-btn { width: 22px; height: 22px; font-size: 12px; bottom: 3px; right: 3px; }
             body:not([data-ui-mode]) .folder-expanded-actions { display: none !important; }
             /* 手机端文本编辑框字号调小 */
             body:not([data-ui-mode]) .weibo-content-input textarea,
@@ -3913,6 +3923,23 @@
                     appState.mediaPreview.visible = true;
                 }
                 function closeMediaPreview() { appState.mediaPreview.visible = false; }
+
+                // 视频缩略图自定义播放/全屏
+                function toggleThumbVideo(overlay) {
+                    const video = overlay.previousElementSibling;
+                    if (!video || video.tagName !== 'VIDEO') return;
+                    if (video.paused) {
+                        video.play().catch(()=>{});
+                    } else {
+                        video.pause();
+                    }
+                }
+                function openThumbVideoFs(btn) {
+                    const video = btn.closest('.video-wrap').querySelector('video');
+                    if (!video) return;
+                    if (video.requestFullscreen) video.requestFullscreen().catch(()=>{});
+                    else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
+                }
                 function prevMedia() {
                     const p = appState.mediaPreview;
                     p.prevIdx = p.index;
@@ -7249,13 +7276,20 @@
                                                     <span v-if="weibo.images.length > 1" class="stack-badge">+{{ weibo.images.length - 1 }}</span>
                                                     <el-button type="danger" size="small" circle class="thumb-del" @click.stop="handleRemoveWeiboImage(weibo.weiboId, 0)">×</el-button>
                                                 </div>
-                                                <!-- 视频：第 1 个，直接带 controls 播放按钮；多字段兜底微博原始 API 结构 -->
-                                                <div v-if="weibo.videos.length > 0" class="media-thumb media-video">
+                                                <!-- 视频：第 1 个，自定义播放覆盖层 + 全屏按钮 -->
+                                                <div v-if="weibo.videos.length > 0" class="media-thumb media-video video-wrap">
                                                     <video
                                                         :src="(function(v){ if(!v) return ''; return getVideoUrl(v) || (v.media_info && (v.media_info.stream_url_hd || v.media_info.stream_url)) || v.url || v.blobUrl || ''; })(weibo.videos[0])"
                                                         class="thumb-video"
-                                                        controls playsinline webkit-playsinline
-                                                        preload="metadata"></video>
+                                                        playsinline webkit-playsinline
+                                                        preload="metadata"
+                                                        @play="($event.target.nextElementSibling && $event.target.nextElementSibling.classList.add('hide'))"
+                                                        @pause="($event.target.nextElementSibling && $event.target.nextElementSibling.classList.remove('hide'))"
+                                                        @ended="($event.target.nextElementSibling && $event.target.nextElementSibling.classList.remove('hide'))"></video>
+                                                    <div class="video-overlay" @click.stop="toggleThumbVideo(this)">
+                                                        <span class="video-play-icon">▶</span>
+                                                        <button class="video-fs-btn" @click.stop="openThumbVideoFs(this)">⛶</button>
+                                                    </div>
                                                     <span v-if="weibo.videos.length > 1" class="stack-badge">+{{ weibo.videos.length - 1 }}</span>
                                                     <el-button type="danger" size="small" circle class="thumb-del" @click.stop="handleRemoveWeiboVideo(weibo.weiboId, 0)">×</el-button>
                                                 </div>
