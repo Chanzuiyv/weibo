@@ -423,8 +423,22 @@
             font-size: 15px; margin-left: 0 !important;
         }
         body.mode-mobile .weibo-card div[style*="display: flex"]:has(> input[type="file"]) > .el-button {
-            width: auto; height: 34px; padding: 0 14px; font-size: 15px;
+            background: transparent !important; border: none !important;
+            height: auto; padding: 2px 6px; font-size: 20px;
         }
+        /* 原文卡片与屏幕等宽 */
+        body.mode-mobile .weibo-card { width: 100vw; margin-left: calc(50% - 50vw); }
+        body.mode-mobile .weibo-card .el-card { border-radius: 0; }
+        /* 顶部工具行（展示区/检测链接/全选/删除选中项）与正文拉开距离 */
+        body.mode-mobile .list-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-bottom: 14px; }
+        body.mode-mobile .list-toolbar > div { float: none !important; }
+        /* 手机端隐藏：筛选卡、已N审、两个确认按钮、重复的装饰🔗 */
+        body.mode-mobile .mobile-filter-card { display: none !important; }
+        body.mode-mobile .review-tag { display: none !important; }
+        body.mode-mobile .confirm-btn { display: none !important; }
+        body.mode-mobile .link-icon-deco { display: none !important; }
+        /* 点赞/收藏/标签挪到 header 左下角独占一行 */
+        body.mode-mobile .weibo-card .item-actions { flex-basis: 100%; order: 99; margin-top: 4px; }
         /* 原文文本框：独占整行拉长，emoji 键移到下一行 */
         body.mode-mobile .weibo-card div[style*="display: flex"]:has(> .el-textarea) { flex-wrap: wrap; }
         body.mode-mobile .weibo-card .el-textarea { flex: 1 1 100% !important; }
@@ -547,8 +561,22 @@
                 font-size: 15px; margin-left: 0 !important;
             }
             body:not([data-ui-mode]) .weibo-card div[style*="display: flex"]:has(> input[type="file"]) > .el-button {
-                width: auto; height: 34px; padding: 0 14px; font-size: 15px;
+                background: transparent !important; border: none !important;
+                height: auto; padding: 2px 6px; font-size: 20px;
             }
+            /* 原文卡片与屏幕等宽 */
+            body:not([data-ui-mode]) .weibo-card { width: 100vw; margin-left: calc(50% - 50vw); }
+            body:not([data-ui-mode]) .weibo-card .el-card { border-radius: 0; }
+            /* 顶部工具行与正文拉开距离 */
+            body:not([data-ui-mode]) .list-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-bottom: 14px; }
+            body:not([data-ui-mode]) .list-toolbar > div { float: none !important; }
+            /* 手机端隐藏：筛选卡、已N审、两个确认按钮、重复的装饰🔗 */
+            body:not([data-ui-mode]) .mobile-filter-card { display: none !important; }
+            body:not([data-ui-mode]) .review-tag { display: none !important; }
+            body:not([data-ui-mode]) .confirm-btn { display: none !important; }
+            body:not([data-ui-mode]) .link-icon-deco { display: none !important; }
+            /* 点赞/收藏/标签挪到 header 左下角独占一行 */
+            body:not([data-ui-mode]) .weibo-card .item-actions { flex-basis: 100%; order: 99; margin-top: 4px; }
             body:not([data-ui-mode]) .weibo-card div[style*="display: flex"]:has(> .el-textarea) { flex-wrap: wrap; }
             body:not([data-ui-mode]) .weibo-card .el-textarea { flex: 1 1 100% !important; }
             body:not([data-ui-mode]) .weibo-card .el-textarea__inner {
@@ -6763,7 +6791,7 @@
                         </div>
 
                         <div v-if="appState.currentPage === 'weiboCheck'">
-                            <el-card class="stats-card" style="margin-bottom: 20px;">
+                            <el-card class="stats-card mobile-filter-card" style="margin-bottom: 20px;">
                                 <el-form :model="checkForm" inline>
                                     <el-form-item label="微博ID筛选">
                                         <el-input v-model="checkForm.filterId" placeholder="输入微博ID"></el-input>
@@ -6804,7 +6832,7 @@
 
                             <el-card class="stats-card" style="margin-bottom: 20px;">
                                 <template #header>
-                                    <div class="card-header">
+                                    <div class="card-header list-toolbar">
                                         <span>展示区 ({{ filteredWeibos.length }}/{{ scopeWeibos.length }})</span>
                                         <div style="float: right; display: flex; gap: 12px;">
                                             <el-button @click="handleBatchCheckLinks" :loading="batchLinkChecking">🔄 检测链接</el-button>
@@ -6859,7 +6887,7 @@
                                                     </span>
                                                 </div>
                                                 <div style="display: flex; gap: 8px; align-items: center;">
-                                                    <el-tag v-if="weibo.status.reviewCount && weibo.status.reviewCount > 0" :type="weibo.status.reviewCount >= 2 ? 'success' : 'primary'">
+                                                    <el-tag v-if="weibo.status.reviewCount && weibo.status.reviewCount > 0" class="review-tag" :type="weibo.status.reviewCount >= 2 ? 'success' : 'primary'">
                                                         已{{ weibo.status.reviewCount }}审
                                                     </el-tag>
                                                     <el-tag v-if="weibo.isImageMissing" type="danger" size="small">缺图</el-tag>
@@ -6875,7 +6903,7 @@
                                             <template v-if="weibo.entryMode === 'link'">
                                                 <div style="background: #f5f7fa; border: 1px solid #e4e7ed; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px;">
                                                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                                                        <span style="font-size: 18px;">🔗</span>
+                                                        <span class="link-icon-deco" style="font-size: 18px;">🔗</span>
                                                         <a :href="weiboLinkOf(weibo)" target="_blank" rel="noopener" class="link-url-full" style="font-size: 13px; color: #409eff; word-break: break-all; flex: 1; min-width: 160px;">{{ weiboLinkOf(weibo) }}</a>
                                                         <a :href="weiboLinkOf(weibo)" target="_blank" rel="noopener" class="link-url-short" title="打开原文链接" @click.stop>🔗</a>
                                                         <el-tag v-if="weibo.linkStatus === 'alive'" type="success" effect="dark" size="small">✓ 链接正常</el-tag>
@@ -6933,15 +6961,24 @@
                                             </div>
                                             <div v-else style="color: #909399; margin-bottom: 12px;">暂无图片</div>
                                             <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                                                <input 
-                                                    type="file" 
-                                                    accept="image/*" 
-                                                    multiple 
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    multiple
                                                     style="display: none;"
                                                     :ref="el => { if (el) weiboImageUploadRefs[weibo.weiboId] = el; }"
                                                     @change="(e) => handleAddWeiboImage(e, weibo.weiboId)"
                                                 >
                                                 <el-button type="primary" @click="handleClickWeiboUpload(weibo.weiboId)"><span class="btn-emoji">＋🖼️</span><span class="btn-text">上传图片</span></el-button>
+                                                <input
+                                                    type="file"
+                                                    accept="video/*"
+                                                    multiple
+                                                    style="display: none;"
+                                                    :ref="el => { if (el) weiboVideoUploadRefs[weibo.weiboId] = el; }"
+                                                    @change="(e) => handleAddWeiboVideo(e, weibo.weiboId)"
+                                                >
+                                                <el-button type="success" @click="handleClickWeiboVideoUpload(weibo.weiboId)"><span class="btn-emoji">＋🎬</span><span class="btn-text">上传视频</span></el-button>
                                             </div>
                                             <div v-if="weibo.videos.length > 0" style="margin-bottom: 12px;">
                                                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -6967,25 +7004,16 @@
                                                 </div>
                                             </div>
                                             <div v-else style="color: #909399; margin-bottom: 12px;">暂无视频</div>
-                                            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                                                <input 
-                                                    type="file" 
-                                                    accept="video/*" 
-                                                    multiple 
-                                                    style="display: none;"
-                                                    :ref="el => { if (el) weiboVideoUploadRefs[weibo.weiboId] = el; }"
-                                                    @change="(e) => handleAddWeiboVideo(e, weibo.weiboId)"
-                                                >
-                                                <el-button type="success" @click="handleClickWeiboVideoUpload(weibo.weiboId)"><span class="btn-emoji">＋🎬</span><span class="btn-text">上传视频</span></el-button>
-                                            </div>
                                             <div style="display: flex; gap: 8px;">
                                                 <el-button
+                                                    class="confirm-btn"
                                                     :type="weibo.status.isImageConfirmed ? 'success' : 'primary'"
                                                     @click="handleConfirmImage(weibo.weiboId)"
                                                 >
                                                     <span class="btn-emoji">{{ weibo.status.isImageConfirmed ? '✅' : '🖼️' }}</span><span class="btn-text">{{ weibo.status.isImageConfirmed ? '✓ 图已确认' : '图/频确认' }}</span>
                                                 </el-button>
                                                 <el-button
+                                                    class="confirm-btn"
                                                     :type="weibo.status.isContentConfirmed ? 'success' : 'primary'"
                                                     @click="handleConfirmContent(weibo.weiboId)"
                                                 >
@@ -7087,7 +7115,7 @@
                         </div>
 
                         <div v-if="appState.currentPage === 'commentCheck'">
-                            <el-card class="stats-card" style="margin-bottom: 20px;">
+                            <el-card class="stats-card mobile-filter-card" style="margin-bottom: 20px;">
                                 <el-form :model="commentCheckForm" inline>
                                     <el-form-item label="微博ID筛选">
                                         <el-select v-model="commentCheckForm.filterWeiboId" placeholder="选择微博ID" clearable style="width: 200px;">
