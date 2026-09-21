@@ -506,6 +506,41 @@
         body.mode-mobile .thumb-img { width: 72px !important; height: 72px !important; border-radius: 6px; }
         body.mode-mobile .media-video { width: 120px; height: 72px; }
         body.mode-mobile .thumb-video { width: 120px !important; height: 72px; border-radius: 6px; }
+
+        /* 手机端隐藏旧版文件夹按钮 + 显示引导提示 */
+        body.mode-mobile .legacy-folder-btn { display: none !important; }
+        body.mode-mobile .legacy-mobile-tip { display: block !important; padding: 12px; background: #fdf6ec; border-radius: 8px; border: 1px solid #faecd8; }
+
+        /* ===== 媒体全屏预览弹窗（桌面+手机通用） ===== */
+        .media-preview-mask {
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,.95);
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column;
+        }
+        .mp-stage { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 60px 10px 40px; }
+        .mp-item { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        .mp-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .mp-video { max-width: 100%; max-height: 100%; width: auto; height: auto; background: #000; border-radius: 6px; }
+        .mp-close {
+            position: absolute; top: 12px; right: 12px;
+            width: 36px; height: 36px; border-radius: 50%;
+            background: rgba(255,255,255,.15); color: #fff; border: none;
+            font-size: 22px; line-height: 1; cursor: pointer;
+        }
+        .mp-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 44px; height: 44px; border-radius: 50%;
+            background: rgba(255,255,255,.15); color: #fff; border: none;
+            font-size: 28px; cursor: pointer; line-height: 1;
+        }
+        .mp-prev { left: 12px; }
+        .mp-next { right: 12px; }
+        .mp-counter {
+            position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+            color: #fff; font-size: 14px;
+            background: rgba(255,255,255,.15); padding: 4px 12px; border-radius: 14px;
+        }
         /* ④页收藏夹折叠标题：窄屏允许换行，名称/条数不被压缩折断 */
         body.mode-mobile .folder-title-bar { display: flex; flex-wrap: wrap; row-gap: 4px; min-width: 0; padding-right: 0; }
         body.mode-mobile .folder-title-bar > span { white-space: nowrap; flex: none; }
@@ -642,6 +677,8 @@
             body:not([data-ui-mode]) .thumb-img { width: 72px !important; height: 72px !important; border-radius: 6px; }
             body:not([data-ui-mode]) .media-video { width: 120px; height: 72px; }
             body:not([data-ui-mode]) .thumb-video { width: 120px !important; height: 72px; border-radius: 6px; }
+            body:not([data-ui-mode]) .legacy-folder-btn { display: none !important; }
+            body:not([data-ui-mode]) .legacy-mobile-tip { display: block !important; padding: 12px; background: #fdf6ec; border-radius: 8px; border: 1px solid #faecd8; }
             /* 顶部工具行与正文拉开距离 */
             body:not([data-ui-mode]) .list-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-bottom: 14px; }
             body:not([data-ui-mode]) .list-toolbar > div { float: none !important; }
@@ -1148,6 +1185,8 @@
             profileTopTab: 'fav',   // 手机端外层 tab: 'fav'(收藏) / 'account'(账号+备份)
             folderDialogVisible: false,
             folderForm: { id: '', name: '', type: 'mixed' },
+            // 媒体全屏预览
+            mediaPreview: { visible: false, items: [], index: 0, prevIdx: 0 },
             favPickerVisible: false,
             favPickerTarget: null,
             tagDialogVisible: false,
@@ -3777,6 +3816,54 @@
                         );
                         return Promise.resolve(null);
                     }
+                }
+
+                // ===== 统一媒体全屏预览：把图片 + 视频拼成一个 items 数组，点任意缩略图都能打开 =====
+                function openMediaPreview(weibo, clickIdx, clickType) {
+                    const items = [];
+                    (weibo.images || []).forEach((img, i) => {
+                        const url = getImageUrl(img);
+                        if (url) items.push({ type: 'image', url, idx: i, kind: 'weiboImage', weiboId: weibo.weiboId });
+                    });
+                    (weibo.videos || []).forEach((v, i) => {
+                        const url = getVideoUrl(v);
+                        if (url) items.push({ type: 'video', url, idx: i, kind: 'weiboVideo', weiboId: weibo.weiboId });
+                    });
+                    if (!items.length) return;
+                    // 找到点击项在合并列表里的位置
+                    let pos = 0;
+                    if (clickType === 'image') {
+                        // 找 images 数组里第 clickIdx 个非空图片
+                        let c = 0;
+                        for (let i = 0; i < items.length; i++) {
+                            if (items[i].type === 'image') {
+                                if (c === clickIdx) { pos = i; break; }
+                                c++;
+                            }
+                        }
+                    } else {
+                        let c = 0;
+                        for (let i = 0; i < items.length; i++) {
+                            if (items[i].type === 'video') {
+                                if (c === clickIdx) { pos = i; break; }
+                                c++;
+                            }
+                        }
+                    }
+                    appState.mediaPreview.items = items;
+                    appState.mediaPreview.index = pos;
+                    appState.mediaPreview.visible = true;
+                }
+                function closeMediaPreview() { appState.mediaPreview.visible = false; }
+                function prevMedia() {
+                    const p = appState.mediaPreview;
+                    p.prevIdx = p.index;
+                    p.index = (p.index - 1 + p.items.length) % p.items.length;
+                }
+                function nextMedia() {
+                    const p = appState.mediaPreview;
+                    p.prevIdx = p.index;
+                    p.index = (p.index + 1) % p.items.length;
                 }
 
                 // 旧数据中个别评论缺少评论ID：按内容生成确定性ID，保证重复导入不重复
@@ -6548,6 +6635,7 @@
                     handleClickWeiboVideoUpload,
                     handleAddWeiboVideo,
                     handleRemoveWeiboVideo,
+                    openMediaPreview, closeMediaPreview, prevMedia, nextMedia,
                     getImageUrl,
                     getImageFilePath,
                     getVideoUrl,
@@ -7088,28 +7176,24 @@
                                             <div v-if="$extractUrls(weibo.content).length > 0" style="margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
                                                 <a v-for="(u, uidx) in $extractUrls(weibo.content)" :key="uidx" :href="u" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #409eff; text-decoration: underline; word-break: break-all;">🔗{{ u }}</a>
                                             </div>
-                                            <!-- 合并：图片 + 视频 一行平铺，超限叠加 "+N" -->
+                                            <!-- 合并：图片 + 视频 一行平铺，超限叠加 "+N"，点击打开全屏预览 -->
                                             <div class="media-strip" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: flex-start;">
                                                 <!-- 图片：最多 3 张平铺，第 4 张起叠 "+N" -->
                                                 <template v-for="(img, idx) in weibo.images.slice(0, 3)" :key="'i'+idx">
-                                                    <div v-if="getImageUrl(img)" class="media-thumb">
-                                                        <el-image
-                                                            :src="getImageUrl(img)"
-                                                            :preview-src-list="weibo.images.map(i => getImageUrl(i)).filter(Boolean)"
-                                                            :initial-index="idx"
-                                                            preview-teleported
-                                                            class="thumb-img"
-                                                            fit="cover"
-                                                        ></el-image>
+                                                    <div v-if="getImageUrl(img)" class="media-thumb" @click="openMediaPreview(weibo, idx, 'image')">
+                                                        <img :src="getImageUrl(img)" class="thumb-img" />
                                                         <span v-if="idx === 2 && weibo.images.length > 3" class="stack-badge">+{{ weibo.images.length - 3 }}</span>
-                                                        <el-button type="danger" size="small" circle class="thumb-del" @click="handleRemoveWeiboImage(weibo.weiboId, idx)">×</el-button>
+                                                        <el-button type="danger" size="small" circle class="thumb-del" @click.stop="handleRemoveWeiboImage(weibo.weiboId, idx)">×</el-button>
                                                     </div>
                                                 </template>
-                                                <!-- 视频：最多 1 个平铺，第 2 个起叠 "+N" -->
-                                                <div v-if="weibo.videos.length > 0 && getVideoUrl(weibo.videos[0])" class="media-thumb media-video">
-                                                    <video :src="getVideoUrl(weibo.videos[0])" class="thumb-video" controls preload="metadata"></video>
-                                                    <span v-if="weibo.videos.length > 1" class="stack-badge">+{{ weibo.videos.length - 1 }}</span>
-                                                    <el-button type="danger" size="small" circle class="thumb-del" @click="handleRemoveWeiboVideo(weibo.weiboId, 0)">×</el-button>
+                                                <!-- 视频：全部平铺（手机端按可用宽度自动折行） -->
+                                                <div v-for="(video, vidx) in weibo.videos" :key="'v'+vidx"
+                                                     v-if="getVideoUrl(video)"
+                                                     class="media-thumb media-video"
+                                                     @click="openMediaPreview(weibo, vidx, 'video')">
+                                                    <video :src="getVideoUrl(video)" class="thumb-video" preload="metadata" @click.stop></video>
+                                                    <span v-if="weibo.videos.length > 1" class="stack-badge">🎬</span>
+                                                    <el-button type="danger" size="small" circle class="thumb-del" @click.stop="handleRemoveWeiboVideo(weibo.weiboId, vidx)">×</el-button>
                                                 </div>
                                                 <!-- 空提示 -->
                                                 <div v-if="weibo.images.length === 0 && weibo.videos.length === 0" style="color: #909399;">暂无图片、视频</div>
@@ -7867,7 +7951,17 @@
                             <el-card style="margin-top: 16px;">
                                 <template #header><div class="card-header">🗂 导入旧版整理数据</div></template>
                                 <div style="margin-bottom:12px;">
-                                    <el-button type="warning" @click="importLegacyData">🗂 选择旧版数据文件夹导入</el-button>
+                                    <el-button type="warning" class="legacy-folder-btn" @click="importLegacyData">🗂 选择旧版数据文件夹导入</el-button>
+                                    <div class="legacy-mobile-tip" style="display:none;">
+                                        <p style="color:#e6a23c;font-size:13px;line-height:1.8;margin:0 0 8px;">
+                                            ⚠️ 旧版迁移依赖<b>文件夹层级</b>（成员名 / 年份 / 原始数据），手机浏览器无法选文件夹。
+                                        </p>
+                                        <p style="color:#606266;font-size:13px;line-height:1.8;margin:0;">
+                                            两种办法：<br/>
+                                            ① 用<b>电脑</b>打开本工具 → 点这个按钮选文件夹导入<br/>
+                                            ② 先电脑上点<b>「📦 整库备份」</b>生成 .wbbak，手机上点<b>「📥 换机恢复」</b>选文件即可完整迁移
+                                        </p>
+                                    </div>
                                 </div>
                                 <p style="color:#606266;font-size:13px;line-height:1.8;margin:0;">
                                     支持两种旧数据：<b>「系统数据」文件夹</b>（JSON 成果）和 <b>「成员微博整理」「评论数据」</b>（Excel 原始表）。推荐选择包含这三者的<b>上一级文件夹</b>一起导入，工具会自动按<b>文件夹名建立艺人</b>、按<b>年份归档</b>、自动去重合并（Excel 只补充 JSON 里没有的内容），可多次执行。
@@ -7890,6 +7984,36 @@
                             </div><!-- profile-pane-account 结束 -->
                         </div>
                         </div>
+
+                <!-- 媒体全屏预览（图片+视频统一滑动） -->
+                <div v-if="appState.mediaPreview.visible" class="media-preview-mask" @click.self="closeMediaPreview">
+                    <button class="mp-close" @click="closeMediaPreview">×</button>
+                    <button v-if="appState.mediaPreview.items.length > 1" class="mp-nav mp-prev" @click="prevMedia">‹</button>
+                    <button v-if="appState.mediaPreview.items.length > 1" class="mp-nav mp-next" @click="nextMedia">›</button>
+                    <div class="mp-counter" v-if="appState.mediaPreview.items.length > 1">
+                        {{ appState.mediaPreview.index + 1 }} / {{ appState.mediaPreview.items.length }}
+                    </div>
+                    <!-- 内容区：transition 滑入 -->
+                    <div class="mp-stage">
+                        <template v-for="(item, i) in appState.mediaPreview.items" :key="i">
+                            <div v-if="i === appState.mediaPreview.index" class="mp-item">
+                                <!-- 图片 -->
+                                <template v-if="item.type === 'image'">
+                                    <img :src="item.url" class="mp-img" @click.stop />
+                                </template>
+                                <!-- 视频 -->
+                                <template v-else>
+                                    <video :key="'v'+item.url"
+                                           :src="item.url"
+                                           class="mp-video"
+                                           controls
+                                           playsinline
+                                           webkit-playsinline></video>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
 
                 <el-dialog v-model="appState.progressVisible" title="数据初始化中" class="progress-dialog" :close-on-click-modal="false" :show-close="false">
                     <el-progress :percentage="appState.progressPercent" :stroke-width="20"></el-progress>
