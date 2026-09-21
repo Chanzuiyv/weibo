@@ -617,7 +617,7 @@
 
         const statsLoaded = ref(false);
 
-        // 官方默认外链代理（腾讯云 SCF Web 函数 · 函数URL，国内直连）：新用户开箱即用；用户可在设置中换成自己的或清空停用
+        // 官方默认外链代理（腾讯云 SCF Web 函数 · 函数URL，国内直连）：新用户开箱即用，无用户配置入口
         const DEFAULT_MEDIA_PROXY = 'https://1492394154-3lg2zqjabe.ap-shanghai.tencentscf.com';
         const appState = reactive({
             loaded: true,
@@ -728,7 +728,7 @@
             tagDialogTarget: null,
             tagFormSelected: [],
             avatarUrl: '',
-            // 外链媒体代理：默认官方 Worker（开箱即用），用户可手动改为自己的或清空停用
+            // 外链媒体代理：默认官方云端转发服务（开箱即用），无用户配置入口
             mediaProxy: DEFAULT_MEDIA_PROXY,
             linkRiskConfirmed: false,
             snapshotUrlMap: {},           // 收藏夹内图片相对路径 -> blob/data URL
@@ -4321,17 +4321,75 @@
                 const imageInputRef = ref(null);
                 const videoInputRef = ref(null);
 
+                // 微博链接 → 唯一标识（数字 mid 或字母 bid）；同步解析，t.cn 短链需另走 resolveWeiboShort
+                const WEIBO_BID_RE = /^[A-Za-z][A-Za-z0-9]{8,15}$/;
+                const extractWeiboToken = (raw) => {
+                    const s = String(raw || '').trim();
+                    if (!s) return '';
+                    if (/^\d{6,}$/.test(s)) return s;          // 直接粘贴了数字 ID
+                    let u;
+                    try { u = new URL(/^[a-z]+:\/\//i.test(s) ? s : 'https://' + s); } catch (e) { return ''; }
+                    const host = u.hostname.toLowerCase().replace(/^www\./, '');
+                    const q = (k) => u.searchParams.get(k) || '';
+                    const segs = u.pathname.split('/').map(x => { try { return decodeURIComponent(x); } catch (e) { return x; } }).filter(Boolean);
+                    // 各端分享链接常见查询参数（专栏 ttarticle 的 id 不是微博正文，需排除）
+                    const qid = q('weibo_id') || q('mid') || q('id') || q('status_id');
+                    if (/^\d{6,}$/.test(qid) && !(host === 'weibo.com' && segs.includes('ttarticle'))) return qid;
+                    const pick = (x) => (/^\d{6,}$/.test(x) || WEIBO_BID_RE.test(x)) ? x : '';
+                    if (host === 'm.weibo.cn') {
+                        // 个人主页路径不是微博正文
+                        if (segs[0] === 'u' || segs[0] === 'profile' || segs[0] === 'n') return '';
+                        const i = segs.findIndex(x => x === 'detail' || x === 'status' || x === 'statuses');
+                        if (i >= 0 && segs[i + 1]) return pick(segs[i + 1]);
+                        // m 端裸链：/<数字ID 或 bid>
+                        const top = segs[0];
+                        return top ? pick(top) : '';
+                    }
+                    if (host === 'weibo.com') {
+                        if (segs[0] === 'ttarticle') return '';
+                        const i = segs.indexOf('detail');
+                        if (i >= 0 && segs[i + 1]) return pick(segs[i + 1]);
+                        // /<用户uid>/<mid 或 bid>；u、p 等主页路径不是微博正文
+                        if (/^\d{6,}$/.test(segs[0]) && segs[1]) return pick(segs[1]);
+                        return '';
+                    }
+                    if (host === 'weibo.cn') {
+                        const i = segs.findIndex(x => x === 'comment' || x === 'repost' || x === 'attitude');
+                        if (i >= 0 && segs[i + 1]) return pick(segs[i + 1]);
+                        const last = segs[segs.length - 1];
+                        return last ? pick(last) : '';
+                    }
+                    if (/\.weibo\.cn$/.test(host)) {
+                        // 国际版/其他子域分享链接：优先查询参数（已处理），其次末段
+                        const last = segs[segs.length - 1];
+                        return last ? pick(last) : '';
+                    }
+                    return '';
+                };
+                const isWeiboShortLink = (raw) => /^https?:\/\/t\.cn\/[A-Za-z0-9]+/i.test(String(raw || '').trim());
+                const resolveWeiboShort = async (raw) => {
+                    const base = (appState.mediaProxy || '').trim();
+                    if (!base) return '';
+                    try {
+                        const r = await fetch(base + (base.includes('?') ? '&' : '?') + 'resolve=' + encodeURIComponent(String(raw).trim()));
+                        if (!r.ok) return '';
+                        const j = await r.json();
+                        return (j && j.url) ? extractWeiboToken(j.url) : '';
+                    } catch (e) { return ''; }
+                };
                 const parseWeiboUrl = async () => {
                     const url = crawlForm.weiboUrl.trim();
                     if (!url) return;
-                    
-                    const weiboIdMatch = url.match(/\/detail\/(\d+)/);
-                    
-                    if (weiboIdMatch) {
-                        crawlForm.weiboId = weiboIdMatch[1];
-                        const d = await fetchWeiboDate(crawlForm.weiboId);
-                        if (d) { crawlForm.date = d; showToast('已自动获取发布日期', 'success'); }
+                    let token = extractWeiboToken(url);
+                    if (!token && isWeiboShortLink(url)) {
+                        showToast('正在解析短链…', 'info');
+                        token = await resolveWeiboShort(url);
                     }
+                    if (!token) { crawlForm.weiboId = ''; return; }
+                    crawlForm.weiboId = token;
+                    const d = await fetchWeiboDate(token);
+                    if (d) { crawlForm.date = d; showToast('已识别微博，自动获取发布日期', 'success'); }
+                    else { showToast('已识别微博链接', 'success'); }
                 };
 
                 const clickImageUpload = () => {
@@ -4412,7 +4470,7 @@
                 // ===== 链接收藏：自动抓取正文/图片 + 失效检测 =====
                 // 检测通道（自动择优）：① 油猴桥 window.__WB_BRIDGE（跨平台·零依赖） ② HTTP 外链代理 mediaProxy
                 const LINK_CHECK_TTL = 7 * 24 * 3600 * 1000;
-                const weiboLinkOf = (w) => (w.url || ('https://m.weibo.cn/detail/' + w.weiboId));
+                const weiboLinkOf = (w) => w.url || ((/^\d+$/.test(String(w.weiboId)) ? 'https://m.weibo.cn/detail/' : 'https://m.weibo.cn/status/') + w.weiboId);
                 const bridgeAvailable = () => !!(window.__WB_BRIDGE && typeof window.__WB_BRIDGE.check === 'function');
                 // 获取微博完整 status：{ ok, exists, data }
                 const fetchWeiboStatus = async (id) => {
@@ -4435,8 +4493,7 @@
                 };
                 const weiboIdFromInput = (urlOrWeibo) => {
                     if (urlOrWeibo && typeof urlOrWeibo === 'object') return String(urlOrWeibo.weiboId || '');
-                    const s = String(urlOrWeibo || '').trim();
-                    return /^\d+$/.test(s) ? s : ((s.match(/(\d{9,})/) || [])[1] || '');
+                    return extractWeiboToken(urlOrWeibo);
                 };
                 // 微博正文 HTML → 纯文本（保留 #话题#、@用户、[表情]）
                 const weiboHtmlToText = (html) => {
@@ -4476,7 +4533,7 @@
                         let msg, type;
                         if (s === 'alive') { msg = '✓ 链接正常'; type = 'success'; }
                         else if (s === 'dead') { msg = '⚠️ 该链接已失效'; type = 'error'; }
-                        else if (!appState.mediaProxy && !bridgeAvailable()) { msg = '未配置检测通道，无法自动检测链接（④设置 → 外链与检测，推荐油猴脚本）'; type = 'warning'; }
+                        else if (!appState.mediaProxy && !bridgeAvailable()) { msg = '自动检测暂不可用（内置通道未启用），可稍后重试或联系作者'; type = 'warning'; }
                         else { msg = '无法确定链接状态（通道异常或网络受限，可稍后重试）'; type = 'warning'; }
                         showToast(msg, type);
                     }
@@ -5731,9 +5788,6 @@
                     appState.adminMode = localStorage.getItem('weibo_admin_mode') === '1' || location.hash === '#admin';
                     if (location.hash === '#admin') localStorage.setItem('weibo_admin_mode', '1');
 
-                    // 检测通道：油猴桥（window.__WB_BRIDGE，由用户脚本注入）
-                    bridgeAlive.value = bridgeAvailable();
-
                     // 多标签页提醒
                     if (typeof BroadcastChannel !== 'undefined') {
                         const tabChannel = new BroadcastChannel('weibo_tool_tabs_v1');
@@ -5826,206 +5880,6 @@
                 app.config.globalProperties.$recordBrowse = recordBrowse;
                 app.config.globalProperties.$snapshotImageUrl = snapshotImageUrl;
 
-                // ===== 外链媒体代理（解决微博图床/视频防盗链）=====
-                const proxyTesting = ref(false);
-                const WORKER_SCRIPT = [
-'// 微博外链代理（图床/视频转发 + 链接存活检测）：把本文件全部内容粘贴到 Cloudflare Workers 编辑器并 Deploy',
-'const UA = \'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\';',
-'',
-'function randHex(n) {',
-'  const a = new Uint8Array(n);',
-'  crypto.getRandomValues(a);',
-'  return Array.from(a).map(x => x.toString(16).padStart(2, \'0\')).join(\'\');',
-'}',
-'',
-'// 访客身份缓存（同一 Worker 实例复用，约 10 分钟，批量检测时只领一次身份）',
-'let vCache = { at: 0, sub: \'\', subp: \'\' };',
-'',
-'async function visitorIdentity() {',
-'  if (vCache.sub && Date.now() - vCache.at < 10 * 60 * 1000) return vCache;',
-'  // 1) 访问 m.weibo.cn，自动跟随 302 到访客中转页',
-'  const home = await fetch(\'https://m.weibo.cn/\', {',
-'    headers: { \'User-Agent\': UA },',
-'    redirect: \'follow\'',
-'  });',
-'  const enterUrl = home.url;',
-'  const host = new URL(enterUrl).hostname;',
-'  // 2) genvisitor2 领取访客身份（SUB/SUBP）',
-'  const body = new URLSearchParams({',
-'    cb: \'visitor_gray_callback\',',
-'    ver: \'20250916\',',
-'    request_id: randHex(16),',
-'    tid: \'\',',
-'    from: \'weibo\',',
-'    webdriver: \'false\',',
-'    rid: String(Date.now()),',
-'    return_url: \'https://m.weibo.cn/\'',
-'  }).toString();',
-'  const g = await fetch(\'https://\' + host + \'/visitor/genvisitor2\', {',
-'    method: \'POST\',',
-'    headers: {',
-'      \'User-Agent\': UA,',
-'      \'Referer\': enterUrl,',
-'      \'Content-Type\': \'application/x-www-form-urlencoded\'',
-'    },',
-'    body',
-'  });',
-'  const t = await g.text();',
-'  const i = t.indexOf(\'({"retcode"\');',
-'  const j = t.lastIndexOf(\'})\');',
-'  if (i < 0 || j < 0) throw new Error(\'visitor parse fail\');',
-'  const resp = JSON.parse(t.slice(i + 1, j + 1));',
-'  if (resp.retcode !== 20000000 || !resp.data || !resp.data.sub) throw new Error(\'visitor gen fail\');',
-'  vCache = { at: Date.now(), sub: resp.data.sub, subp: resp.data.subp };',
-'  return vCache;',
-'}',
-'',
-'// 检测微博：{ alive:true, data:status } 存活；{ alive:false } 失效；null 无法确定',
-'async function checkWeibo(id) {',
-'  const v = await visitorIdentity();',
-'  const r = await fetch(\'https://m.weibo.cn/statuses/show?id=\' + encodeURIComponent(id), {',
-'    headers: {',
-'      \'User-Agent\': UA,',
-'      \'Cookie\': \'SUB=\' + v.sub + \'; SUBP=\' + v.subp,',
-'      \'Referer\': \'https://m.weibo.cn/detail/\' + id,',
-'      \'X-Requested-With\': \'XMLHttpRequest\'',
-'    }',
-'  });',
-'  const j = await r.json();',
-'  if (j.ok === 1) return { alive: true, data: j.data };',
-'  if (j.ok === 0 && String(j.errno) === \'20101\') return { alive: false };',
-'  return null;',
-'}',
-'',
-'const CORS = {',
-'  \'Access-Control-Allow-Origin\': \'*\',',
-'  \'Access-Control-Allow-Methods\': \'GET, OPTIONS\'',
-'};',
-'',
-'export default {',
-'  async fetch(request) {',
-'    const sp = new URL(request.url).searchParams;',
-'',
-'    // 路由一：链接存活检测 ?check=<微博ID>',
-'    const check = sp.get(\'check\');',
-'    if (check) {',
-'      if (!/^\\d{6,}$/.test(check)) {',
-'        return new Response(JSON.stringify({ ok: false, error: \'bad id\' }), { status: 400, headers: { ...CORS, \'Content-Type\': \'application/json\' } });',
-'      }',
-'      try {',
-'        const result = await checkWeibo(check);',
-'        if (result === null) {',
-'          return new Response(JSON.stringify({ ok: false, error: \'unknown\' }), { status: 502, headers: { ...CORS, \'Content-Type\': \'application/json\' } });',
-'        }',
-'        return new Response(JSON.stringify({ ok: true, exists: result.alive, data: result.data }), {',
-'          headers: { ...CORS, \'Content-Type\': \'application/json\', \'Cache-Control\': \'no-store\' }',
-'        });',
-'      } catch (e) {',
-'        return new Response(JSON.stringify({ ok: false, error: \'visitor fail\' }), { status: 502, headers: { ...CORS, \'Content-Type\': \'application/json\' } });',
-'      }',
-'    }',
-'',
-'    // 路由二：图床/视频转发 ?u=<原链接>',
-'    const u = sp.get(\'u\');',
-'    if (!u) return new Response(\'微博外链代理：缺少参数 u 或 check\', { status: 400 });',
-'    let target;',
-'    try { target = new URL(u); } catch (e) {',
-'      return new Response(\'bad url\', { status: 400 });',
-'    }',
-'    // 仅允许微博图床/视频域名，避免被当作开放代理滥用',
-'    const okHost = /(^|\\.)(sinaimg\\.cn|weibocdn\\.com)$/.test(target.hostname);',
-'    if (!okHost) return new Response(\'host not allowed\', { status: 403 });',
-'    const upstream = await fetch(target.toString(), {',
-'      headers: {',
-'        \'Referer\': \'https://m.weibo.cn/\',',
-'        \'User-Agent\': UA',
-'      }',
-'    });',
-'    const headers = new Headers(upstream.headers);',
-'    headers.set(\'Access-Control-Allow-Origin\', \'*\');',
-'    headers.set(\'Cache-Control\', \'public, max-age=86400\');',
-'    return new Response(upstream.body, { status: upstream.status, headers });',
-'  }',
-'};'
-                ].join('\n');
-
-                const handleSaveMediaProxy = async () => {
-                    let v = (appState.mediaProxy || '').trim();
-                    if (v) {
-                        if (!/^https?:\/\//i.test(v)) v = 'https://' + v;
-                        try { new URL(v); } catch (e) { showToast('代理地址格式不正确', 'error'); return; }
-                        if (isHttpsEnv && /^http:\/\//i.test(v)) {
-                            showToast('当前是 HTTPS 页面，不能使用 HTTP 代理（混合内容限制），请改用 Cloudflare Worker（https://）', 'error');
-                            return;
-                        }
-                    }
-                    appState.mediaProxy = v;
-                    await saveUserDataNow();
-                    showToast(v ? '代理地址已保存' : '已停用外链代理', 'success');
-                };
-
-                const handleTestMediaProxy = () => {
-                    const base = (appState.mediaProxy || '').trim();
-                    if (!base) { showToast('请先填写代理地址', 'error'); return; }
-                    let sample = '';
-                    for (const w of appState.weiboData.data) {
-                        for (const im of (w.images || [])) {
-                            const u = (im && typeof im === 'object') ? (im.url || '') : (typeof im === 'string' ? im : '');
-                            if (u && /sinaimg\.cn/.test(u)) { sample = u; break; }
-                        }
-                        if (sample) break;
-                    }
-                    if (!sample) sample = 'https://wx2.sinaimg.cn/mw2000/0089d9dDgy1hloust2fhcj30hd0n6wkh.jpg';
-                    const finalUrl = proxifyMediaUrl(sample);
-                    proxyTesting.value = true;
-                    let finished = false;
-                    const done = (ok, msg) => {
-                        if (finished) return;
-                        finished = true;
-                        proxyTesting.value = false;
-                        showToast(msg, ok ? 'success' : 'error');
-                    };
-                    const timer = setTimeout(() => done(false, '测试超时（15 秒），请检查代理是否已部署'), 15000);
-                    const probe = new Image();
-                    probe.onload = () => { clearTimeout(timer); done(true, '连接正常，图片尺寸 ' + probe.naturalWidth + '×' + probe.naturalHeight); };
-                    probe.onerror = () => { clearTimeout(timer); done(false, '代理取不到图片，请确认代码已粘贴并 Deploy'); };
-                    probe.src = finalUrl;
-                };
-
-                // 检测通道状态：① 油猴桥 ② HTTP 代理
-                const isHttpsEnv = location.protocol === 'https:';
-                const bridgeAlive = ref(false);
-                const channelStatus = computed(() => {
-                    if (bridgeAlive.value) return { tag: 'success', text: '✅ 浏览器助手（油猴脚本）已连接 — 全自动可用，无需启动任何程序' };
-                    const mp = (appState.mediaProxy || '').trim();
-                    if (mp) {
-                        if (isHttpsEnv && /^http:\/\//i.test(mp)) return { tag: 'error', text: '❌ 当前是 HTTPS 页面，不能使用 HTTP 代理（浏览器混合内容限制）— 请改用 Cloudflare Worker（https://）' };
-                        if (mp === DEFAULT_MEDIA_PROXY) return { tag: 'success', text: '🟢 官方默认代理已启用 — 全自动可用，无需任何配置（不放心可清空，改用油猴脚本或本地代理）' };
-                        return { tag: 'warning', text: '🟡 已填自定义代理地址 — 点「测试连通」验证；或改用下方油猴脚本（更省事）' };
-                    }
-                    return { tag: 'info', text: '⚪ 未配置全自动通道 — 图片仍可直接显示（零安装），仅「只存链接」的自动检测/抓取不可用' };
-                });
-                const detectChannel = () => {
-                    bridgeAlive.value = bridgeAvailable();
-                    if (bridgeAlive.value) { showToast('浏览器助手（油猴脚本）已连接', 'success'); return; }
-                    if ((appState.mediaProxy || '').trim()) { showToast((appState.mediaProxy || '').trim() === DEFAULT_MEDIA_PROXY ? '未检测到油猴脚本，将使用官方默认代理' : '未检测到油猴脚本，将使用已填的代理地址', 'info'); }
-                    else { showToast('未检测到油猴脚本，也未配置代理', 'warning'); }
-                };
-
-                const copyWorkerScript = async () => {
-                    try {
-                        await navigator.clipboard.writeText(WORKER_SCRIPT);
-                        showToast('代码已复制到剪贴板', 'success');
-                    } catch (e) {
-                        const ta = document.createElement('textarea');
-                        ta.value = WORKER_SCRIPT;
-                        document.body.appendChild(ta);
-                        ta.select();
-                        try { document.execCommand('copy'); showToast('代码已复制', 'success'); }
-                        catch (err) { showToast('复制失败，请手动选择代码', 'error'); }
-                        document.body.removeChild(ta);
-                    }
-                };
 
                 return {
                     appState,
@@ -6085,15 +5939,6 @@
                     importFullBackup,
                     importLegacyData,
                     refreshSnapshotMedia,
-                    proxyTesting,
-                    WORKER_SCRIPT,
-                    handleSaveMediaProxy,
-                    handleTestMediaProxy,
-                    channelStatus,
-                    isHttpsEnv,
-                    detectChannel,
-                    bridgeAvailable,
-                    copyWorkerScript,
                     handleLogout,
                     startGuide,
                     nextGuideStep,
@@ -7504,64 +7349,6 @@
                                 <el-button @click="showRiskNotice">查看风险告知书</el-button>
                             </el-card>
 
-                            <el-card style="margin-top: 16px;">
-                                <template #header><div class="card-header">🔗 外链与检测通道（图片 / 视频 / 自动抓取）</div></template>
-                                <el-alert :type="channelStatus.tag" :closable="false" style="margin-bottom:12px;">
-                                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                                        <span style="font-size:13px;">{{ channelStatus.text }}</span>
-                                        <el-button size="small" @click="detectChannel">重新检测</el-button>
-                                    </div>
-                                </el-alert>
-
-                                <p style="color:#606266;font-size:13px;line-height:1.8;margin:0 0 10px;">
-                                    本工具是<b>单文件网页</b>，Windows / Mac 通用。<b>图片和视频已自动直显</b>（无需任何配置）；只有「只存链接」模式的<b>自动抓正文、链接失效检测</b>需要一个「通道」。三选一即可：
-                                </p>
-
-                                <el-alert type="success" :closable="false" style="margin-bottom:8px;" title="方案一 · 什么都不装（零门槛，推荐人人可用）">
-                                    <div style="font-size:13px;line-height:1.9;">
-                                        直接<b>双击 index.html</b> 打开使用即可（不用启动任何程序）。图片、视频自动显示，「📝 完整保存」手贴模式全功能可用；只是「🔗 只存链接」的自动检测/抓取不可用（可以手动补录）。
-                                    </div>
-                                </el-alert>
-
-                                <el-alert type="success" :closable="false" style="margin-bottom:8px;" title="方案二 · 油猴脚本（全自动·跨平台，Mac 首选）">
-                                    <div style="font-size:13px;line-height:1.9;">
-                                        1. 安装 <b>Tampermonkey</b> 扩展（<b>不要去 tampermonkey.net 官网，国内打不开</b>）。<b>Edge 浏览器</b>：右上角「⋯」→「扩展」→「获取 Edge 扩展」→ 搜索 <code>Tampermonkey</code> → 「获取」；<b>Chrome 浏览器</b>：右上角拼图图标 →「访问 Chrome 应用商店」→ 搜索 <code>Tampermonkey</code> → 安装。<br>
-                                        2. 点击浏览器右上角 Tampermonkey 图标 → 「添加新脚本」→ 全选删除后粘贴 <code>微博整理助手.user.js</code> 的全部内容（用记事本打开该文件复制）→ Ctrl+S 保存。<br>
-                                        3. 若用 file:// 方式打开本工具：在浏览器扩展管理里给 Tampermonkey 开启「允许访问文件网址」，刷新页面即可。之后检测/抓取全自动，<b>无需 Python、无需启动任何程序</b>。
-                                    </div>
-                                </el-alert>
-
-                                <el-alert type="success" :closable="false" style="margin-bottom:8px;" title="方案三 · 云端 Worker（手机可用全自动，可选）">
-                                    <div style="font-size:13px;line-height:1.9;">
-                                        你部署一次，所有人在下方填你的 Worker 地址即全自动。<b>无需 Python、无需扩展，手机浏览器也能用</b>（油猴装不了的手机端，这是唯一全自动方案）。<br>
-                                        三步：<b>①</b> 注册 <a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noopener noreferrer">Cloudflare</a>（免费）→ <b>②</b> Workers &amp; Pages → Create Worker → Deploy → <b>③</b> Edit code 粘贴下方复制的代码 → 再点 Deploy，把得到的 <code>https://xxx.workers.dev</code> 填到下方「测试连通」。
-                                    </div>
-                                    <div style="margin:8px 0 2px;">
-                                        <el-button size="small" type="primary" plain @click="copyWorkerScript">📋 一键复制 Worker 代码（无需查看内容，粘贴到 Cloudflare 即可）</el-button>
-                                    </div>
-                                </el-alert>
-
-                                <el-alert :type="isHttpsEnv ? 'error' : 'info'" :closable="false" style="margin-bottom:10px;" :title="isHttpsEnv ? '方案四 · 本地代理（当前 HTTPS 页面不可用，请用方案三）' : '方案四 · 本地代理程序（自己电脑用·需装 Python）'">
-                                    <div style="font-size:13px;line-height:1.9;">
-                                        <template v-if="isHttpsEnv">
-                                            当前页面是 HTTPS，浏览器禁止向 HTTP 代理发请求（混合内容限制）。<b>请改用上方方案三（Cloudflare Worker）</b>，或用 file:// 本地打开本工具再使用本地代理。
-                                        </template>
-                                        <template v-else>
-                                            Windows：双击 <code>启动代理.bat</code>，下方填 <code>http://127.0.0.1:8787</code> 保存。<br>
-                                            Mac：终端执行 <code>python3 weibo_proxy.py</code>（或双击 <code>启动代理.command</code>），下方填同样地址。关掉窗口即停止。<br>
-                                            <span style="color:#e6a23c;">注：127.0.0.1 是你本机地址，别人填了没用；要发给别人用请选方案三。</span>
-                                        </template>
-                                    </div>
-                                </el-alert>
-
-                                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                                    <el-input v-model="appState.mediaProxy" placeholder="云端填 https://xxx.workers.dev ；本地填 http://127.0.0.1:8787" style="flex:1;min-width:240px;"></el-input>
-                                    <el-button type="primary" @click="handleSaveMediaProxy">保存</el-button>
-                                    <el-button type="info" plain :loading="proxyTesting" @click="handleTestMediaProxy">测试连通</el-button>
-                                </div>
-                                <el-alert type="info" :closable="false" style="margin-top:8px;" title="隐私说明：默认使用官方 Cloudflare Worker（由工具作者部署维护），浏览外链图片、检测链接时它会知道你请求了哪些链接。如不放心，可清空地址改用油猴脚本，或使用只在自己电脑运行的本地代理；清空后工具不请求任何第三方。"></el-alert>
-                            </el-card>
-
                             <div style="text-align:center;margin-top:18px;color:#c0c4cc;font-size:12px;">
                                 <span style="cursor:default;user-select:none;" @click="toggleAdminMode">微博收藏助手 v2.0</span>
                                 <span v-if="appState.adminMode" style="margin-left:8px;color:#f56c6c;">管理员模式</span>
@@ -7803,7 +7590,7 @@
                 <p style="margin:0 0 12px 0;color:#606266;">选择「🔗 只存链接」时，仅保存微博链接，正文文字缓存于本机，但<b>图片和视频仍为外链</b>。若原微博被删除、原图被清理，外链可能无法显示。<b>特别重要的内容请使用「📝 完整保存」上传入库</b>，以确保永久留存。</p>
 
                 <p style="margin:0 0 6px 0;"><b>四、代理与网络</b></p>
-                <p style="margin:0 0 12px 0;color:#606266;">为显示外链图片和检测链接状态，工具<b>默认使用官方 Cloudflare Worker</b>（由作者部署维护）。浏览外链时该代理会知道你请求了哪些链接；如不放心可在设置中清空，改用油猴脚本或仅在你电脑运行的本地代理；清空后工具不请求任何第三方。</p>
+                <p style="margin:0 0 12px 0;color:#606266;">为显示外链图片和检测链接状态，工具<b>默认使用作者部署的云端转发服务</b>（位于腾讯云，开箱即用、无需配置）。你浏览外链图片、检测链接时，该服务会收到对应链接并从微博服务器取回内容；工具不会向其提交你的收藏数据。</p>
 
                 <p style="margin:0 0 6px 0;"><b>五、使用风险</b></p>
                 <p style="margin:0 0 12px 0;color:#606266;">本工具为个人开发，可能存在未知 bug，使用前请确认你的数据来源合法。微博平台接口可能随时调整，导致链接检测或内容抓取失败，属正常情况，不代表工具失效。</p>
