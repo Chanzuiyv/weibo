@@ -380,6 +380,34 @@
         body.mode-mobile .stats-card [style*="display: flex"] { flex-wrap: wrap; }
         body.mode-mobile .el-form [style*="display: flex"] { flex-wrap: wrap; }
 
+        /* ===== 折叠组件（移动端默认收起）===== */
+        .collapse-arrow { display: none; color: #909399; font-size: 12px; }
+        body.mode-mobile .collapse-toggle { cursor: pointer; user-select: none; }
+        body.mode-mobile .collapse-arrow { display: inline; }
+        body.mode-mobile .collapse-body { display: none; }
+        body.mode-mobile .collapse-body.open { display: block; }
+
+        /* ===== 微博卡片（②③页）呼吸感优化 ===== */
+        body.mode-mobile .weibo-card { margin-bottom: 16px; }
+        body.mode-mobile .weibo-card .el-card__body { padding: 14px 12px; }
+        /* 头部行（ID/日期/链接 + 序号）允许换行 */
+        body.mode-mobile .weibo-card div[style*="justify-content: space-between"] { flex-wrap: wrap; row-gap: 8px; }
+        /* 复选框改为独占一行，内容区不再被挤压 */
+        body.mode-mobile .weibo-card .el-card__body > div:first-child { display: block; }
+        body.mode-mobile .weibo-card .el-card__body > div:first-child > .el-checkbox { margin-bottom: 8px; }
+        /* 各区块统一留白 */
+        body.mode-mobile .weibo-card div[style*="flex: 1"] > div { margin-bottom: 14px !important; }
+        /* 上传图片/视频按钮整行大按钮 */
+        body.mode-mobile .weibo-card div[style*="display: flex"]:has(> input[type="file"]) > .el-button { width: 100%; height: 42px; font-size: 14px; }
+        /* 底部操作按钮：两列大按钮 */
+        body.mode-mobile .weibo-card div[style*="flex: 1"] > div:last-child { flex-wrap: wrap; }
+        body.mode-mobile .weibo-card div[style*="flex: 1"] > div:last-child > .el-button {
+            flex: 1 1 calc(50% - 4px); margin-left: 0 !important;
+            height: 42px; font-size: 14px;
+        }
+        /* ③页微博原文区同样加留白 */
+        body.mode-mobile .weibo-original { padding: 10px 0; }
+
         /* 自动响应式（没有手动切换过时，按屏幕宽度判断） */
         @media (max-width: 768px) {
             body:not([data-ui-mode]) .sidebar {
@@ -451,6 +479,27 @@
             body:not([data-ui-mode]) .el-radio__label { white-space: normal; }
             body:not([data-ui-mode]) .stats-card [style*="display: flex"] { flex-wrap: wrap; }
             body:not([data-ui-mode]) .el-form [style*="display: flex"] { flex-wrap: wrap; }
+
+            /* 折叠组件（移动端默认收起） */
+            body:not([data-ui-mode]) .collapse-toggle { cursor: pointer; user-select: none; }
+            body:not([data-ui-mode]) .collapse-arrow { display: inline; color: #909399; font-size: 12px; }
+            body:not([data-ui-mode]) .collapse-body { display: none; }
+            body:not([data-ui-mode]) .collapse-body.open { display: block; }
+
+            /* 微博卡片（②③页）呼吸感优化 */
+            body:not([data-ui-mode]) .weibo-card { margin-bottom: 16px; }
+            body:not([data-ui-mode]) .weibo-card .el-card__body { padding: 14px 12px; }
+            body:not([data-ui-mode]) .weibo-card div[style*="justify-content: space-between"] { flex-wrap: wrap; row-gap: 8px; }
+            body:not([data-ui-mode]) .weibo-card .el-card__body > div:first-child { display: block; }
+            body:not([data-ui-mode]) .weibo-card .el-card__body > div:first-child > .el-checkbox { margin-bottom: 8px; }
+            body:not([data-ui-mode]) .weibo-card div[style*="flex: 1"] > div { margin-bottom: 14px !important; }
+            body:not([data-ui-mode]) .weibo-card div[style*="display: flex"]:has(> input[type="file"]) > .el-button { width: 100%; height: 42px; font-size: 14px; }
+            body:not([data-ui-mode]) .weibo-card div[style*="flex: 1"] > div:last-child { flex-wrap: wrap; }
+            body:not([data-ui-mode]) .weibo-card div[style*="flex: 1"] > div:last-child > .el-button {
+                flex: 1 1 calc(50% - 4px); margin-left: 0 !important;
+                height: 42px; font-size: 14px;
+            }
+            body:not([data-ui-mode]) .weibo-original { padding: 10px 0; }
         }
 
         /* UI 切换按钮 */
@@ -5976,6 +6025,9 @@
                     // auto 模式不加 data-ui-mode，让 @media 查询接管
                 };
 
+                // ③页「添加新评论」表单折叠：移动端默认收起，点击卡片头展开/收起（桌面端恒展开由 CSS 控制）
+                const commentFormOpen = ref(false);
+
                 // 管理员模式：在个人中心连续点击 5 次版本号开启
                 let adminClickCount = 0, adminClickTimer = null;
                 const toggleAdminMode = () => {
@@ -6118,6 +6170,7 @@
                     uiModeIcon,
                     uiModeLabel,
                     toggleUIMode,
+                    commentFormOpen,
                     artistSearchResults,
                     canCreateArtist,
                     selectArtist,
@@ -7022,7 +7075,12 @@
                             </div>
 
                             <el-card class="stats-card" style="margin-bottom: 20px;">
-                                <template #header><div class="card-header">添加新评论</div></template>
+                                <template #header>
+                                    <div class="card-header collapse-toggle" @click="commentFormOpen = !commentFormOpen">
+                                        添加新评论<span class="collapse-arrow">{{ commentFormOpen ? ' ▲' : ' ▼' }}</span>
+                                    </div>
+                                </template>
+                                <div class="collapse-body" :class="{ open: commentFormOpen }">
                                 <el-form :model="addCommentForm" :inline="false" label-width="100px">
                                     <el-row :gutter="20">
                                         <el-col :span="24">
@@ -7091,6 +7149,7 @@
                                         <el-button @click="handleResetCommentForm">重置表单</el-button>
                                     </el-form-item>
                                 </el-form>
+                                </div>
                             </el-card>
 
                             <el-card class="stats-card">
