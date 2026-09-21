@@ -4592,9 +4592,11 @@
                             .map(p => ({ url: ((p.large && p.large.url) || p.url || '') }))
                             .filter(x => x.url);
                         const pi = res.data.page_info;
-                        if (pi && pi.type === 'video' && pi.media_info) {
-                            const mi = pi.media_info;
-                            const vu = mi.mp4_700_mp4 || mi.mp4_hd_url || mi.mp4_sd_url || '';
+                        if (pi && pi.type === 'video') {
+                            const mi = pi.media_info || {};
+                            const urls = pi.urls || {};
+                            const vu = mi.stream_url_hd || mi.stream_url
+                                     || urls.mp4_720p_mp4 || urls.mp4_hd_mp4 || urls.mp4_ld_mp4 || '';
                             if (vu) videos = [{ url: vu }];
                         }
                     } else if (existing) {
