@@ -506,6 +506,8 @@
         body.mode-mobile .thumb-img { width: 72px !important; height: 72px !important; border-radius: 6px; }
         body.mode-mobile .media-video { width: 120px; height: 72px; }
         body.mode-mobile .thumb-video { width: 120px !important; height: 72px; border-radius: 6px; }
+        /* 收藏夹展开区的第二套按钮，手机端隐藏（折叠头已有一套） */
+        body.mode-mobile .folder-expanded-actions { display: none !important; }
 
         /* 手机端文本编辑框字号调小 */
         body.mode-mobile .weibo-content-input textarea,
@@ -682,6 +684,7 @@
             body:not([data-ui-mode]) .thumb-img { width: 72px !important; height: 72px !important; border-radius: 6px; }
             body:not([data-ui-mode]) .media-video { width: 120px; height: 72px; }
             body:not([data-ui-mode]) .thumb-video { width: 120px !important; height: 72px; border-radius: 6px; }
+            body:not([data-ui-mode]) .folder-expanded-actions { display: none !important; }
             /* 手机端文本编辑框字号调小 */
             body:not([data-ui-mode]) .weibo-content-input textarea,
             body:not([data-ui-mode]) textarea.weibo-text-edit,
@@ -7245,16 +7248,16 @@
                                             <div v-if="$extractUrls(weibo.content).length > 0" style="margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
                                                 <a v-for="(u, uidx) in $extractUrls(weibo.content)" :key="uidx" :href="u" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #409eff; text-decoration: underline; word-break: break-all;">🔗{{ u }}</a>
                                             </div>
-                                            <!-- 只显示第 1 个媒体（图片优先、无图则视频），右下角叠 +N，点击打开全屏预览 -->
-                                            <div class="media-strip" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: flex-start;">
-                                                <!-- 有图片 → 渲染第 1 张图片 -->
+                                            <!-- 图片 1 个 + 视频 1 个，并排同行；各自右下角叠 +N -->
+                                            <div class="media-strip" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; align-items: flex-start;">
+                                                <!-- 图片：显示第 1 张 -->
                                                 <div v-if="weibo.images.length > 0" class="media-thumb" @click="openMediaPreview(weibo, 0, 'image')">
                                                     <img :src="getImageUrl(weibo.images[0]) || (typeof weibo.images[0] === 'string' ? weibo.images[0] : '')" class="thumb-img" />
-                                                    <span v-if="weibo.images.length + weibo.videos.length > 1" class="stack-badge">+{{ weibo.images.length + weibo.videos.length - 1 }}</span>
+                                                    <span v-if="weibo.images.length > 1" class="stack-badge">+{{ weibo.images.length - 1 }}</span>
                                                     <el-button type="danger" size="small" circle class="thumb-del" @click.stop="handleRemoveWeiboImage(weibo.weiboId, 0)">×</el-button>
                                                 </div>
-                                                <!-- 无图但有视频 → 渲染第 1 个视频（多字段兜底，兼容微博原始 API 结构） -->
-                                                <div v-else-if="weibo.videos.length > 0"
+                                                <!-- 视频：显示第 1 个 -->
+                                                <div v-if="weibo.videos.length > 0"
                                                      class="media-thumb media-video"
                                                      @click="openMediaPreview(weibo, 0, 'video')">
                                                     <video
@@ -7267,9 +7270,12 @@
                                                 </div>
                                                 <!-- 空提示 -->
                                                 <div v-if="weibo.images.length === 0 && weibo.videos.length === 0" style="color: #909399;">暂无图片、视频</div>
-                                                <div v-else-if="weibo.images.length > 0 && weibo.videos.length === 0" style="color: #909399; width: 100%; font-size: 12px;">📷 {{ weibo.images.length }} 张图片 ｜ 暂无视频 ｜ 点图片可全屏预览</div>
-                                                <div v-else-if="weibo.images.length === 0 && weibo.videos.length > 0" style="color: #909399; width: 100%; font-size: 12px;">🎬 {{ weibo.videos.length }} 个视频 ｜ 暂无图片 ｜ 点视频可全屏预览</div>
-                                                <div v-else style="color: #909399; width: 100%; font-size: 12px;">📷 {{ weibo.images.length }} 张 ｜ 🎬 {{ weibo.videos.length }} 个视频 ｜ 点缩略图可全屏预览</div>
+                                            </div>
+                                            <div style="color: #909399; font-size: 12px; margin-bottom: 12px;">
+                                                <span v-if="weibo.images.length > 0">📷 {{ weibo.images.length }} 张图片</span>
+                                                <span v-if="weibo.images.length > 0 && weibo.videos.length > 0">｜</span>
+                                                <span v-if="weibo.videos.length > 0">🎬 {{ weibo.videos.length }} 个视频</span>
+                                                <span style="margin-left: 8px; color: #b0b3b8;">点缩略图可全屏预览</span>
                                             </div>
                                             <div style="display: flex; gap: 8px; margin-bottom: 12px;">
                                                 <input
@@ -7899,7 +7905,7 @@
                                                     </span>
                                                 </span>
                                             </template>
-                                            <div class="folder-toolbar">
+                                            <div class="folder-toolbar folder-expanded-actions">
                                                 <el-button size="small" @click="exportFolder(f)">📤 导出此收藏夹（.wbfav，含图片）</el-button>
                                                 <el-button size="small" plain @click="openEditFolder(f)">编辑名称/类型</el-button>
                                                 <el-button size="small" plain type="danger" @click="deleteFolder(f)">删除收藏夹</el-button>
