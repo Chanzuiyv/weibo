@@ -507,6 +507,11 @@
         body.mode-mobile .media-video { width: 120px; height: 72px; }
         body.mode-mobile .thumb-video { width: 120px !important; height: 72px; border-radius: 6px; }
 
+        /* 手机端文本编辑框字号调小 */
+        body.mode-mobile .weibo-content-input textarea,
+        body.mode-mobile textarea.weibo-text-edit,
+        body.mode-mobile .el-textarea__inner { font-size: 13px !important; line-height: 1.5 !important; }
+
         /* 手机端隐藏旧版文件夹按钮 + 显示引导提示 */
         body.mode-mobile .legacy-folder-btn { display: none !important; }
         body.mode-mobile .legacy-mobile-tip { display: block !important; padding: 12px; background: #fdf6ec; border-radius: 8px; border: 1px solid #faecd8; }
@@ -677,6 +682,10 @@
             body:not([data-ui-mode]) .thumb-img { width: 72px !important; height: 72px !important; border-radius: 6px; }
             body:not([data-ui-mode]) .media-video { width: 120px; height: 72px; }
             body:not([data-ui-mode]) .thumb-video { width: 120px !important; height: 72px; border-radius: 6px; }
+            /* 手机端文本编辑框字号调小 */
+            body:not([data-ui-mode]) .weibo-content-input textarea,
+            body:not([data-ui-mode]) textarea.weibo-text-edit,
+            body:not([data-ui-mode]) .el-textarea__inner { font-size: 13px !important; line-height: 1.5 !important; }
             body:not([data-ui-mode]) .legacy-folder-btn { display: none !important; }
             body:not([data-ui-mode]) .legacy-mobile-tip { display: block !important; padding: 12px; background: #fdf6ec; border-radius: 8px; border: 1px solid #faecd8; }
             /* 顶部工具行与正文拉开距离 */
@@ -3882,7 +3891,11 @@
                         if (url) items.push({ type: 'image', url, idx: i, kind: 'weiboImage', weiboId: weibo.weiboId });
                     });
                     (weibo.videos || []).forEach((v, i) => {
-                        const url = getVideoUrl(v);
+                        let url = getVideoUrl(v);
+                        if (!url && v) {
+                            const mi = v.media_info || (typeof v === 'object' && v);
+                            if (mi) url = mi.stream_url_hd || mi.stream_url || v.url || v.blobUrl || '';
+                        }
                         if (url) items.push({ type: 'video', url, idx: i, kind: 'weiboVideo', weiboId: weibo.weiboId });
                     });
                     if (!items.length) return;
@@ -7232,29 +7245,31 @@
                                             <div v-if="$extractUrls(weibo.content).length > 0" style="margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
                                                 <a v-for="(u, uidx) in $extractUrls(weibo.content)" :key="uidx" :href="u" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #409eff; text-decoration: underline; word-break: break-all;">🔗{{ u }}</a>
                                             </div>
-                                            <!-- 合并：图片 + 视频 一行平铺，超限叠加 "+N"，点击打开全屏预览 -->
+                                            <!-- 只显示第 1 个媒体（图片优先、无图则视频），右下角叠 +N，点击打开全屏预览 -->
                                             <div class="media-strip" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: flex-start;">
-                                                <!-- 图片：最多 3 张平铺，第 4 张起叠 "+N" -->
-                                                <template v-for="(img, idx) in weibo.images.slice(0, 3)" :key="'i'+idx">
-                                                    <div v-if="getImageUrl(img)" class="media-thumb" @click="openMediaPreview(weibo, idx, 'image')">
-                                                        <img :src="getImageUrl(img)" class="thumb-img" />
-                                                        <span v-if="idx === 2 && weibo.images.length > 3" class="stack-badge">+{{ weibo.images.length - 3 }}</span>
-                                                        <el-button type="danger" size="small" circle class="thumb-del" @click.stop="handleRemoveWeiboImage(weibo.weiboId, idx)">×</el-button>
-                                                    </div>
-                                                </template>
-                                                <!-- 视频：全部平铺（手机端按可用宽度自动折行） -->
-                                                <div v-for="(video, vidx) in weibo.videos" :key="'v'+vidx"
-                                                     v-if="getVideoUrl(video)"
+                                                <!-- 有图片 → 渲染第 1 张图片 -->
+                                                <div v-if="weibo.images.length > 0" class="media-thumb" @click="openMediaPreview(weibo, 0, 'image')">
+                                                    <img :src="getImageUrl(weibo.images[0]) || (typeof weibo.images[0] === 'string' ? weibo.images[0] : '')" class="thumb-img" />
+                                                    <span v-if="weibo.images.length + weibo.videos.length > 1" class="stack-badge">+{{ weibo.images.length + weibo.videos.length - 1 }}</span>
+                                                    <el-button type="danger" size="small" circle class="thumb-del" @click.stop="handleRemoveWeiboImage(weibo.weiboId, 0)">×</el-button>
+                                                </div>
+                                                <!-- 无图但有视频 → 渲染第 1 个视频（多字段兜底，兼容微博原始 API 结构） -->
+                                                <div v-else-if="weibo.videos.length > 0"
                                                      class="media-thumb media-video"
-                                                     @click="openMediaPreview(weibo, vidx, 'video')">
-                                                    <video :src="getVideoUrl(video)" class="thumb-video" preload="metadata" @click.stop></video>
-                                                    <span v-if="weibo.videos.length > 1" class="stack-badge">🎬</span>
-                                                    <el-button type="danger" size="small" circle class="thumb-del" @click.stop="handleRemoveWeiboVideo(weibo.weiboId, vidx)">×</el-button>
+                                                     @click="openMediaPreview(weibo, 0, 'video')">
+                                                    <video
+                                                        :src="(getVideoUrl(weibo.videos[0]) ||
+                                                               (weibo.videos[0] && weibo.videos[0].media_info && (weibo.videos[0].media_info.stream_url_hd || weibo.videos[0].media_info.stream_url)) ||
+                                                               '')"
+                                                        class="thumb-video" preload="metadata" @click.stop></video>
+                                                    <span v-if="weibo.videos.length > 1" class="stack-badge">+{{ weibo.videos.length - 1 }}</span>
+                                                    <el-button type="danger" size="small" circle class="thumb-del" @click.stop="handleRemoveWeiboVideo(weibo.weiboId, 0)">×</el-button>
                                                 </div>
                                                 <!-- 空提示 -->
                                                 <div v-if="weibo.images.length === 0 && weibo.videos.length === 0" style="color: #909399;">暂无图片、视频</div>
-                                                <div v-else-if="weibo.images.length > 0 && weibo.videos.length === 0" style="color: #909399; width: 100%;">暂无视频</div>
-                                                <div v-else-if="weibo.images.length === 0 && weibo.videos.length > 0" style="color: #909399; width: 100%;">暂无图片</div>
+                                                <div v-else-if="weibo.images.length > 0 && weibo.videos.length === 0" style="color: #909399; width: 100%; font-size: 12px;">📷 {{ weibo.images.length }} 张图片 ｜ 暂无视频 ｜ 点图片可全屏预览</div>
+                                                <div v-else-if="weibo.images.length === 0 && weibo.videos.length > 0" style="color: #909399; width: 100%; font-size: 12px;">🎬 {{ weibo.videos.length }} 个视频 ｜ 暂无图片 ｜ 点视频可全屏预览</div>
+                                                <div v-else style="color: #909399; width: 100%; font-size: 12px;">📷 {{ weibo.images.length }} 张 ｜ 🎬 {{ weibo.videos.length }} 个视频 ｜ 点缩略图可全屏预览</div>
                                             </div>
                                             <div style="display: flex; gap: 8px; margin-bottom: 12px;">
                                                 <input
