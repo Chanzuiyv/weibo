@@ -1187,6 +1187,8 @@
             folderForm: { id: '', name: '', type: 'mixed' },
             // 媒体全屏预览
             mediaPreview: { visible: false, items: [], index: 0, prevIdx: 0 },
+            // 最近一次整库备份（blobURL + 文件名），用于手机端"分享/再次下载"
+            pendingBackup: null,
             favPickerVisible: false,
             favPickerTarget: null,
             tagDialogVisible: false,
@@ -3692,14 +3694,68 @@
                         const blob = await zip.generateAsync({ type: 'blob' }, meta => {
                             loading.setText('正在压缩整库备份... ' + meta.percent.toFixed(0) + '%');
                         });
-                        const a = document.createElement('a');
-                        a.href = URL.createObjectURL(blob);
-                        a.download = '微博收藏助手_整库备份_' + nowStr().slice(0, 10) + '.wbbak';
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                        setTimeout(() => URL.revokeObjectURL(a.href), 30000);
-                        showToast('整库备份完成：' + kvRecords.length + ' 组数据、' + mediaRecords.length + ' 个媒体文件。文件含账号信息，请妥善保管', 'success');
+
+                        // 判断是否手机端（iOS Safari / Android Chrome 移动端）
+                        const ua = navigator.userAgent || '';
+                        const isMobile = /iPhone|iPad|iPod|Android/i.test(ua);
+                        const filename = '微博收藏助手_整库备份_' + nowStr().slice(0, 10) + '.wbbak';
+                        const blobUrl = URL.createObjectURL(blob);
+
+                        if (!isMobile) {
+                            // 桌面端：自动下载
+                            const a = document.createElement('a');
+                            a.href = blobUrl;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+                            showToast('整库备份完成：' + kvRecords.length + ' 组数据、' + mediaRecords.length + ' 个媒体文件', 'success');
+                        } else {
+                            // 手机端：先存 blob，自动触发一次下载（iOS/Android 都能落盘），然后弹 Dialog 告诉用户存哪
+                            const a = document.createElement('a');
+                            a.href = blobUrl;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+
+                            // 存起来让用户后续可"分享/重下"
+                            appState.pendingBackup = { blobUrl, filename };
+
+                            // 延迟弹提示（等下载触发）
+                            setTimeout(() => {
+                                ElementPlus.ElMessageBox.confirm(
+                                    '备份文件「' + filename + '」已触发下载。\n\n' +
+                                    '📱 iOS Safari：\n打开「文件」App → 浏览 → 我的 iPhone → 「下载」或「微博收藏助手」\n\n' +
+                                    '🤖 Android Chrome：\n打开系统文件管理器 → 内部存储 → 「下载」\n\n' +
+                                    '存好后可以换电脑用【换机恢复】导入。',
+                                    '整库备份完成（' + kvRecords.length + ' 组数据、' + mediaRecords.length + ' 个媒体）',
+                                    {
+                                        confirmButtonText: '📤 分享/存到云盘',
+                                        cancelButtonText: '我知道了',
+                                        type: 'success'
+                                    }
+                                ).then(async () => {
+                                    // 用户点"分享"：优先用 Web Share API（iOS Safari/Android Chrome 都支持）
+                                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], filename)] })) {
+                                        try {
+                                            const file = new File([blob], filename, { type: 'application/zip' });
+                                            await navigator.share({ files: [file], title: filename, text: '微博收藏助手整库备份' });
+                                        } catch (e) { /* 用户取消 */ }
+                                    } else {
+                                        // 不支持分享 → 再次下载让用户自己找
+                                        const a2 = document.createElement('a');
+                                        a2.href = blobUrl;
+                                        a2.download = filename;
+                                        document.body.appendChild(a2);
+                                        a2.click();
+                                        a2.remove();
+                                        ElementPlus.ElMessage.info('已再次触发下载，请到系统「下载」文件夹查找');
+                                    }
+                                }).catch(() => {});
+                            }, 600);
+                        }
                     } catch (e) {
                         console.error(e);
                         showToast('整库备份失败：' + (e.message || e), 'error');
