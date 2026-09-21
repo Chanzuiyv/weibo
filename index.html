@@ -3926,19 +3926,30 @@
 
                 // 视频缩略图自定义播放/全屏
                 function toggleThumbVideo(overlay) {
-                    const video = overlay.previousElementSibling;
-                    if (!video || video.tagName !== 'VIDEO') return;
+                    const wrap = overlay.closest('.video-wrap');
+                    if (!wrap) return;
+                    const video = wrap.querySelector('video');
+                    if (!video) return;
                     if (video.paused) {
-                        video.play().catch(()=>{});
+                        const p = video.play();
+                        if (p && p.catch) p.catch(()=>{});
                     } else {
                         video.pause();
                     }
                 }
                 function openThumbVideoFs(btn) {
-                    const video = btn.closest('.video-wrap').querySelector('video');
+                    const wrap = btn.closest('.video-wrap');
+                    if (!wrap) return;
+                    const video = wrap.querySelector('video');
                     if (!video) return;
-                    if (video.requestFullscreen) video.requestFullscreen().catch(()=>{});
-                    else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
+                    try {
+                        if (video.requestFullscreen) { video.requestFullscreen(); return; }
+                        if (video.webkitRequestFullscreen) { video.webkitRequestFullscreen(); return; }
+                        if (video.webkitEnterFullscreen) { video.webkitEnterFullscreen(); return; }
+                        // iOS Safari 降级：跳到全屏页
+                        video.controls = true;
+                        video.play().catch(()=>{});
+                    } catch(e) { console.warn('fullscreen fail', e); }
                 }
                 function prevMedia() {
                     const p = appState.mediaPreview;
@@ -7273,7 +7284,7 @@
                                                         class="thumb-img"
                                                         fit="cover"
                                                     ></el-image>
-                                                    <span v-if="weibo.images.length > 1" class="stack-badge">+{{ weibo.images.length - 1 }}</span>
+                                                    <span v-if="weibo.images.length > 1" class="stack-badge">共{{ weibo.images.length }}张</span>
                                                     <el-button type="danger" size="small" circle class="thumb-del" @click.stop="handleRemoveWeiboImage(weibo.weiboId, 0)">×</el-button>
                                                 </div>
                                                 <!-- 视频：第 1 个，自定义播放覆盖层 + 全屏按钮 -->
@@ -7286,11 +7297,11 @@
                                                         @play="($event.target.nextElementSibling && $event.target.nextElementSibling.classList.add('hide'))"
                                                         @pause="($event.target.nextElementSibling && $event.target.nextElementSibling.classList.remove('hide'))"
                                                         @ended="($event.target.nextElementSibling && $event.target.nextElementSibling.classList.remove('hide'))"></video>
-                                                    <div class="video-overlay" @click.stop="toggleThumbVideo(this)">
+                                                    <div class="video-overlay" @click.stop="toggleThumbVideo($event.currentTarget)">
                                                         <span class="video-play-icon">▶</span>
-                                                        <button class="video-fs-btn" @click.stop="openThumbVideoFs(this)">⛶</button>
+                                                        <button class="video-fs-btn" @click.stop="openThumbVideoFs($event.currentTarget)">⛶</button>
                                                     </div>
-                                                    <span v-if="weibo.videos.length > 1" class="stack-badge">+{{ weibo.videos.length - 1 }}</span>
+                                                    <span v-if="weibo.videos.length > 1" class="stack-badge">共{{ weibo.videos.length }}个</span>
                                                     <el-button type="danger" size="small" circle class="thumb-del" @click.stop="handleRemoveWeiboVideo(weibo.weiboId, 0)">×</el-button>
                                                 </div>
                                                 <!-- 空提示 -->
