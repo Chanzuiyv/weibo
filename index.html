@@ -489,6 +489,9 @@
             content: ''; position: absolute; bottom: -2px; left: 20%; right: 20%;
             height: 2px; background: #409eff; border-radius: 2px;
         }
+        /* 内层 el-tabs border-card 底部边框隐藏，避免盖在外层 tab 文字上 */
+        body.mode-mobile .el-tabs--border-card > .el-tabs__header { border-bottom: none; }
+        body.mode-mobile .profile-pane-fav .el-tabs { box-shadow: none; border: 1px solid #ebeef5; }
         body.mode-mobile .profile-pane-account,
         body.mode-mobile .profile-pane-fav { display: none; }
         body.mode-mobile .profile-pane-account.active-pane,
@@ -676,6 +679,8 @@
                 content: ''; position: absolute; bottom: -2px; left: 20%; right: 20%;
                 height: 2px; background: #409eff; border-radius: 2px;
             }
+            body:not([data-ui-mode]) .el-tabs--border-card > .el-tabs__header { border-bottom: none; }
+            body:not([data-ui-mode]) .profile-pane-fav .el-tabs { box-shadow: none; border: 1px solid #ebeef5; }
             body:not([data-ui-mode]) .profile-pane-account,
             body:not([data-ui-mode]) .profile-pane-fav { display: none; }
             body:not([data-ui-mode]) .profile-pane-account.active-pane,
@@ -3748,17 +3753,30 @@
                     }
                 }
                 function pickLegacyFolderViaInput() {
-                    return new Promise(resolve => {
-                        const inp = document.createElement('input');
-                        inp.type = 'file';
-                        inp.webkitdirectory = true;
-                        inp.directory = true;
-                        inp.style.display = 'none';
-                        inp.onchange = () => resolve(inp.files);
-                        document.body.appendChild(inp);
-                        inp.click();
-                        setTimeout(() => { if (inp.parentNode && !inp.files) inp.remove(); }, 120000);
-                    });
+                    // 手机端提示：旧版迁移（目录结构）请用电脑端；换机恢复（.wbbak 单文件）可手机操作
+                    const inp = document.createElement('input');
+                    inp.type = 'file';
+                    const supportsDir = 'webkitdirectory' in inp;
+                    if (supportsDir) {
+                        // 桌面端：webkitdirectory 选文件夹
+                        return new Promise(resolve => {
+                            inp.webkitdirectory = true;
+                            inp.directory = true;
+                            inp.style.display = 'none';
+                            inp.onchange = () => resolve(inp.files);
+                            document.body.appendChild(inp);
+                            inp.click();
+                            setTimeout(() => { if (inp.parentNode && !inp.files) inp.remove(); }, 120000);
+                        });
+                    } else {
+                        // 手机端：iOS Safari 不支持 webkitdirectory
+                        ElementPlus.ElMessageBox.alert(
+                            '旧版 Excel / JSON 迁移依赖文件夹层级（成员名 / 年份 / 原始数据），手机浏览器选单文件无法恢复目录结构。\n\n两种办法：\n① 用电脑打开本工具 → 选择旧版数据文件夹导入\n② 先用电脑做【整库备份（.wbbak）】，手机上点【换机恢复】选备份文件即可完整迁移',
+                            '请在电脑端或用备份文件迁移',
+                            { confirmButtonText: '我知道了', type: 'warning', showCancelButton: false }
+                        );
+                        return Promise.resolve(null);
+                    }
                 }
 
                 // 旧数据中个别评论缺少评论ID：按内容生成确定性ID，保证重复导入不重复
@@ -4107,14 +4125,42 @@
                         } else {
                             const files = await pickLegacyFolderViaInput();
                             if (!files || !files.length) return;
+                            // 普通文件选择（无目录）下，从文件名推断成员/年份/路径
+                            const nameMap = new Map();
                             for (const file of Array.from(files)) {
-                                const rp = String(file.webkitRelativePath || '').replace(/\\/g, '/').split('/').slice(1).join('/');
+                                const base = file.name;
+                                let rp = String(file.webkitRelativePath || '').replace(/\\/g, '/').trim();
+                                if (!rp) {
+                                    // 从文件名推断路径：尝试匹配 "成员名/年份/xxx" 结构
+                                    // 旧数据常见命名：{成员名}{年份}/{文件名}.json 或 {成员名}_{年份}_{文件名}.json
+                                    const m1 = base.match(/^(.+?)[-_\s](\d{4})[-_\s]*(.+)$/);
+                                    if (m1) {
+                                        rp = `${m1[1]}/${m1[2]}/${m1[3]}`;
+                                    } else {
+                                        // 只有文件名：放到根下，后续尽量识别
+                                        rp = base;
+                                    }
+                                } else {
+                                    rp = rp.split('/').slice(1).join('/');
+                                }
                                 if (!rp) continue;
                                 pathMap.set(rp, file);
-                                if (/^(weibo|comment)_data\.json$/.test(rp.split('/').pop())) {
-                                    docs.push({ path: rp, kind: rp.split('/').pop().startsWith('weibo') ? 'w' : 'c', text: await file.text() });
+                                nameMap.set(base, file);
+                                // 图片/视频也放到 pathMap，让后续 resolveLocal 能找到
+                                if (!rp.includes('/') && file.type.startsWith('image/')) pathMap.set('images/' + base, file);
+                                else if (!rp.includes('/') && file.type.startsWith('video/')) pathMap.set('videos/' + base, file);
+                                if (/^(weibo|comment)_data\.json$/.test(rp.split('/').pop()) ||
+                                    /^成员微博整理.*\.(xlsx|xls)$/.test(base) ||
+                                    /^评论数据.*\.(xlsx|xls)$/.test(base)) {
+                                    if (rp.endsWith('.json')) {
+                                        docs.push({ path: rp, kind: rp.split('/').pop().startsWith('weibo') ? 'w' : 'c', text: await file.text() });
+                                    } else {
+                                        // xlsx 暂不处理（需要目录结构定位成员/年份），提示用户用电脑端导入
+                                    }
                                 }
                             }
+                            // 把 pathMap 也挂到 nameMap 上，作为 resolveLocal 的兜底
+                            pathMap.__nameMap = nameMap;
                         }
 
                         // 路径末三段：成员 / 年份 / 文件名；聚合到作用域
@@ -7090,30 +7136,6 @@
                                                 >
                                                 <el-button type="success" @click="handleClickWeiboVideoUpload(weibo.weiboId)"><span class="btn-emoji"><span class="plus-mark plus-video">＋</span>🎬</span><span class="btn-text">上传视频</span></el-button>
                                             </div>
-                                            <div v-if="weibo.videos.length > 0" style="margin-bottom: 12px;">
-                                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                                    <template v-for="(video, idx) in weibo.videos" :key="idx">
-                                                        <div v-if="getVideoUrl(video)" style="position: relative;">
-                                                            <video 
-                                                                :src="getVideoUrl(video)" 
-                                                                style="width: 150px; height: 100px;"
-                                                                controls
-                                                                poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 150'%3E%3Crect fill='%23333' width='200' height='150'/%3E%3Ctext fill='white' font-size='14' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3E视频缩略图%3C/text%3E%3C/svg%3E"
-                                                            ></video>
-                                                            <el-button 
-                                                                type="danger" 
-                                                                size="small" 
-                                                                circle 
-                                                                style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; padding: 0; font-size: 12px;"
-                                                                @click="handleRemoveWeiboVideo(weibo.weiboId, idx)"
-                                                            >
-                                                                ×
-                                                            </el-button>
-                                                        </div>
-                                                    </template>
-                                                </div>
-                                            </div>
-                                            <div v-else-if="weibo.images.length > 0" style="color: #909399; margin-bottom: 12px;">暂无视频</div>
                                             <div class="confirm-row" style="display: flex; gap: 8px;">
                                                 <el-button
                                                     class="confirm-btn"
