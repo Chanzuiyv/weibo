@@ -132,9 +132,552 @@
         .artist-pick-empty { color: #909399; text-align: center; padding: 18px; font-size: 13px; }
         .sidebar-profile-btn { font-size: 20px; overflow: hidden; }
         .sidebar-avatar-img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
-        .avatar-ring { width: 110px; height: 110px; border-radius: 50%; padding: 3px; background: linear-gradient(135deg,#409eff,#b37feb,#ff85c0); }
+        .avatar-ring { width: 110px; height: 110px; border-radius: 50%; padding: 3px; background: linear-gradient(135deg,#409eff,#b37feb,#ff85c0); }  /* 默认彩虹，可被内联样式覆盖 */
         .profile-avatar { width: 104px; height: 104px; border-radius: 50%; object-fit: cover; display:block; background:#f0f2f5; }
         .profile-avatar-empty { display:flex; align-items:center; justify-content:center; font-size:42px; color:#c0c4cc; }
+
+        /* ===== 头像裁剪弹窗（PC + 移动通用） ===== */
+        /* stage 本身是 1:1 正方形 + overflow:hidden，所见即所得，无需额外遮罩 */
+        .avatar-crop-dialog .el-dialog__body { padding: 14px 20px !important; }
+        .avatar-crop-tip { font-size:12px; color:#909399; margin-bottom:10px; text-align:center; }
+        .avatar-crop-stage {
+            position: relative; margin: 0 auto; overflow: hidden;
+            background: #1f1f24 center/cover no-repeat; border-radius: 8px;
+            border: 2px solid #409eff; cursor: grab;
+            touch-action: none; user-select: none; -webkit-user-select: none;
+        }
+        .avatar-crop-stage:active { cursor: grabbing; }
+        .avatar-crop-img {
+            position: absolute; top: 0; left: 0; max-width: none; max-height: none;
+            pointer-events: none; will-change: transform; -webkit-user-drag: none; user-select: none;
+        }
+        /* 三分线辅助网格（视觉对齐用，不影响裁剪） */
+        .avatar-crop-grid {
+            position: absolute; inset: 0; pointer-events: none; opacity: .35;
+            background:
+                linear-gradient(to right, transparent 33.33%, rgba(255,255,255,.5) 33.33%, rgba(255,255,255,.5) 33.66%, transparent 33.66%, transparent 66.66%, rgba(255,255,255,.5) 66.66%, rgba(255,255,255,.5) 66.99%, transparent 66.99%),
+                linear-gradient(to bottom, transparent 33.33%, rgba(255,255,255,.5) 33.33%, rgba(255,255,255,.5) 33.66%, transparent 33.66%, transparent 66.66%, rgba(255,255,255,.5) 66.66%, rgba(255,255,255,.5) 66.99%, transparent 66.99%);
+        }
+        @media (max-width: 768px) {
+            .avatar-crop-dialog { width: 94% !important; max-width: 94vw !important; }
+            .avatar-crop-tip { font-size: 11px; }
+        }
+
+        /* ===== 头像框选择器 ===== */
+        .avatar-frame-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 12px; padding: 4px; }
+        .avatar-frame-item { display: flex; flex-direction: column; align-items: center; padding: 10px 6px; border: 2px solid transparent; border-radius: 10px; cursor: pointer; transition: all .15s; background: #fafbfc; }
+        .avatar-frame-item:hover { border-color: #409eff; background: #ecf5ff; }
+        .avatar-frame-item.selected { border-color: #67c23a; background: #f0f9eb; }
+        .avatar-frame-ring { width: 56px; height: 56px; border-radius: 50%; padding: 2px; display: flex; align-items: center; justify-content: center; }
+        .avatar-frame-mock { width: 100%; height: 100%; border-radius: 50%; background: #f0f2f5; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #c0c4cc; }
+        .avatar-frame-name { margin-top: 6px; font-size: 12px; color: #606266; }
+        .avatar-frame-item.selected .avatar-frame-name { color: #67c23a; font-weight: 600; }
+        .avatar-frame-grid-scroll { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; }
+        /* 头像框弹窗 3:4 竖版比例 */
+        .avatar-frame-dialog .el-dialog__body { display: flex; flex-direction: column; height: calc(380px * 4 / 3 - 60px); box-sizing: border-box; }
+        .avatar-frame-foot { text-align: center; font-size: 12px; color: #909399; margin-top: 12px; padding-top: 10px; border-top: 1px dashed #ebeef5; }
+        .avatar-frame-foot a { color: #409eff; margin-left: 4px; }
+        .avatar-frame-foot a:hover { text-decoration: underline; }
+        /* 自定义框删除按钮 */
+        .avatar-frame-item { position: relative; }
+        .avatar-frame-del { position: absolute; top: 4px; right: 4px; width: 16px; height: 16px; line-height: 16px; text-align: center; background: #f56c6c; color: #fff; border-radius: 50%; font-size: 10px; cursor: pointer; }
+        .avatar-frame-del:hover { background: #d33; }
+        /* 上传行 */
+        .avatar-frame-upload-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+        .avatar-frame-upload-btn { display: inline-flex; align-items: center; padding: 6px 14px; background: #409eff; color: #fff; border-radius: 6px; font-size: 13px; cursor: pointer; }
+        .avatar-frame-upload-btn:hover { background: #66b1ff; }
+        .avatar-frame-upload-hint { font-size: 11px; color: #909399; }
+        /* 规范说明 */
+        .avatar-frame-spec { margin-top: 12px; padding: 10px 12px; background: #fafbfc; border-radius: 6px; font-size: 12px; color: #606266; line-height: 1.8; }
+        .avatar-frame-spec-title { font-weight: 600; color: #303133; margin-bottom: 4px; }
+        .avatar-frame-spec ul { margin: 0; padding-left: 18px; }
+        .avatar-frame-spec code { background: #f0f2f5; padding: 1px 5px; border-radius: 3px; font-size: 11px; color: #e6a23c; }
+        @media (max-width: 768px) {
+            .avatar-frame-dialog { width: 94% !important; max-width: 94vw !important; }
+            .avatar-frame-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; }
+        }
+
+        /* ===== 划线批注：工具条 + 渲染区 + 高亮 + popover + 浮动按钮 + 编辑 Dialog ===== */
+        .anno-toolbar {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            padding: 6px 0 8px 0; border-bottom: 1px dashed #ebeef5; margin-bottom: 10px;
+        }
+        .anno-toggle-btn {
+            display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+            border: 1px solid #dcdfe6; background: #f5f7fa; color: #606266;
+            padding: 4px 12px; border-radius: 14px; font-size: 12.5px; transition: all .15s;
+        }
+        .anno-toggle-btn:hover { border-color: #409eff; color: #409eff; background: #ecf5ff; }
+        .anno-toggle-btn.active { border-color: #67c23a; color: #67c23a; background: #f0f9eb; font-weight: 600; }
+        .anno-badge {
+            display: inline-flex; min-width: 18px; height: 18px; padding: 0 5px;
+            background: #f56c6c; color: #fff; border-radius: 9px; font-size: 11px;
+            align-items: center; justify-content: center; line-height: 1;
+        }
+        .anno-toggle-btn.active .anno-badge { background: #67c23a; }
+        .anno-tip { font-size: 12px; color: #909399; flex: 1; min-width: 200px; }
+        .anno-clear-btn {
+            border: 1px solid #fbc4c4; background: #fef0f0; color: #c45656;
+            padding: 3px 10px; border-radius: 12px; font-size: 12px; cursor: pointer;
+        }
+        .anno-clear-btn:hover { background: #fde2e2; }
+
+        .anno-render-area {
+            min-height: 80px; padding: 10px 12px; line-height: 1.85;
+            background: #fafbfc; border: 1px solid #ebeef5; border-radius: 6px;
+            white-space: pre-wrap; word-break: break-word; user-select: text; cursor: text;
+            font-size: 14px; color: #303133;
+        }
+        .anno-render-area:empty::before { content: '(无正文)'; color: #c0c4cc; }
+
+        /* 高亮 4 色 + 6 种下划线样式 */
+        .anno-highlight {
+            position: relative; padding: 1px 2px; margin: 0 1px; border-radius: 3px;
+            cursor: pointer; transition: filter .12s;
+            /* 默认下划线：用 background-image 实现，可灵活换线型 */
+            background-image: linear-gradient(to bottom, transparent 85%, currentColor 85%, currentColor 100%);
+            background-repeat: no-repeat;
+            background-size: 100% 100%;
+        }
+        .anno-highlight:hover { filter: brightness(.94); }
+        /* 4 色背景 */
+        .anno-c-yellow  { background-color: rgba(255, 235, 100, .45); color: #c9a010; }
+        .anno-c-blue    { background-color: rgba(160, 210, 255, .45); color: #1960a0; }
+        .anno-c-green   { background-color: rgba(160, 230, 170, .45); color: #357a2d; }
+        .anno-c-pink    { background-color: rgba(255, 175, 200, .45); color: #c03070; }
+        /* 失配样式 */
+        .anno-highlight.anno-mismatch {
+            background-color: repeating-linear-gradient(45deg, rgba(180,180,180,.18) 0 6px, rgba(180,180,180,.32) 6px 12px);
+            color: #909399; text-decoration: line-through;
+        }
+        /* ===== 6 种下划线样式 ===== */
+        /* 1. underline — 单实线下划线（默认，覆盖 background-image 更简洁） */
+        .anno-line-none { text-decoration: none !important; background-image: none !important; }
+        /* 圈注模式：椭圆/圆角边框，无背景高亮 */
+        .anno-border-circle {
+            background-color: transparent !important;
+            border: 2px solid var(--anno-lc, #303133);
+            border-radius: 50% / 40%;
+            padding: 1px 8px;
+            box-shadow: 0 0 0 1px rgba(255,255,255,.6) inset;
+        }
+        .anno-border-circle.has-frame { border: none; border-radius: 0; padding: 6px 14px; box-shadow: none; background-color: transparent !important; }
+        .anno-line-underline { text-decoration: underline solid; text-underline-offset: 3px; background-image: none; }
+        /* 2. double-underline — 双下划线 */
+        .anno-line-double-underline { text-decoration: underline double; text-underline-offset: 3px; background-image: none; }
+        /* 3. centerline — 删除线/中划线 */
+        .anno-line-centerline { text-decoration: line-through; background-image: none; }
+        /* 4. dotted — 点虚线 */
+        .anno-line-dotted { text-decoration: underline dotted; text-underline-offset: 3px; background-image: none; }
+        /* 5. wavy — 波浪线 */
+        .anno-line-wavy { text-decoration: underline wavy; text-underline-offset: 3px; background-image: none; }
+        /* 6. double-dashed — 双虚线（用 background-image 渐变模拟两条虚线） */
+        .anno-line-double-dashed {
+            background-image:
+                linear-gradient(to right, currentColor 50%, transparent 50%),
+                linear-gradient(to right, currentColor 50%, transparent 50%);
+            background-size: 8px 2px;
+            background-position: bottom 3px left, bottom 0 left;
+            background-repeat: repeat-x;
+        }
+
+        /* 旧 popover CSS 已删除（根因：嵌套文本节点污染 TreeWalker offset） */
+
+        /* ===== 新 tooltip（fixed 定位 + 事件委托，干净不污染文本层） ===== */
+        .anno-tooltip {
+            position: fixed; z-index: 9998; pointer-events: none;
+            /* 水平居中 + 垂直微调（贴纸模式右上定位，文字批注模式下方定位） */
+            display: block;
+        }
+        /* 圈注箭头 SVG 层：覆盖全屏，不拦截鼠标 */
+        .anno-arrow-layer {
+            position: fixed; z-index: 9997; pointer-events: none;
+            overflow: visible;
+            left: 0; top: 0; width: 100vw; height: 100vh;
+        }
+        /* 贴纸模式：右上角小圆形图标 */
+        .anno-tooltip.mode-sticker {
+            transform: translate(-50%, -50%);
+        }
+        .anno-tooltip-sticker-emoji {
+            width: 42px; height: 42px; border-radius: 50%;
+            background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.15);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; line-height: 1;
+        }
+        .anno-tooltip-sticker-img {
+            width: 42px; height: 42px; border-radius: 50%;
+            object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,.15);
+            border: 2px solid #fff;
+        }
+        /* 文字批注模式：下方深色小框 */
+        .anno-tooltip.mode-note {
+            transform: translate(-50%, 0);
+            min-width: 140px; max-width: 280px;
+            background: #303133; color: #fff; border-radius: 8px; padding: 8px 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,.2); line-height: 1.6;
+            font-size: 13px;
+        }
+        .anno-tooltip-arrow {
+            position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+            border: 6px solid transparent; border-top: 0; border-bottom-color: #303133;
+        }
+        .anno-tooltip-text { display: block; word-break: break-word; white-space: normal; }
+        .anno-tooltip-meta { display: block; margin-top: 4px; font-size: 11px; color: #c0c4cc; }
+        /* 失配样式 */
+        .anno-tooltip.mismatch.mode-note { background: #503030; border: 1px solid #fbc4c4; }
+        .anno-tooltip.mismatch .anno-tooltip-arrow { border-bottom-color: #503030; }
+        /* 圈注批注气泡：白色卡片，left/top 锚点 = 箭头尖，靠 transform 贴到尖旁边 */
+        .anno-tooltip.mode-circle {
+            max-width: 220px; min-width: 60px;
+            background: #fff; color: #303133; border-radius: 10px; padding: 8px 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,.18); line-height: 1.5; font-size: 13px;
+            border: 1px solid #ebeef5;
+        }
+        /* 按方向把气泡贴到箭头尖：right→ 气泡在右侧垂直居中；left← 在左侧；down↓ 在下方；up↑ 在上方 */
+        .anno-tooltip.mode-circle[data-dir="right"] { transform: translate(8px, -50%); }
+        .anno-tooltip.mode-circle[data-dir="left"]  { transform: translate(calc(-100% - 8px), -50%); }
+        .anno-tooltip.mode-circle[data-dir="down"]  { transform: translate(-50%, 8px); }
+        .anno-tooltip.mode-circle[data-dir="up"]    { transform: translate(-50%, calc(-100% - 8px)); }
+
+        /* ===== 编辑 Dialog 新增样式 ===== */
+        /* 线型按钮行 */
+        .anno-linestyle-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .anno-linestyle-btn {
+            padding: 6px 14px; border: 1px solid #dcdfe6; border-radius: 6px;
+            background: #fff; font-size: 12.5px; color: #606266; cursor: pointer;
+            transition: all .15s; text-align: center; min-width: 60px;
+        }
+        .anno-linestyle-btn:hover { border-color: #409eff; color: #409eff; }
+        .anno-linestyle-btn.selected { border-color: #409eff; background: #ecf5ff; color: #409eff; font-weight: 600; }
+        /* 线型按钮内的下划线预览（用 border-bottom 模拟） */
+        .anno-linestyle-btn span { display: block; }
+        /* 贴纸选择行 */
+        .anno-sticker-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .anno-sticker-btn, .anno-sticker-clear, .anno-sticker-upload {
+            width: 38px; height: 38px; border: 1px solid #dcdfe6; border-radius: 6px;
+            background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 20px; transition: all .15s; padding: 0;
+        }
+        .anno-sticker-btn:hover, .anno-sticker-clear:hover { border-color: #409eff; }
+        .anno-sticker-btn.selected, .anno-sticker-clear.selected { border-color: #409eff; background: #ecf5ff; box-shadow: 0 0 0 2px rgba(64,158,255,.15); }
+        .anno-sticker-clear { font-size: 11px; color: #909399; flex-direction: column; }
+        .anno-sticker-clear .anno-sticker-none { font-size: 14px; line-height: 1; }
+        .anno-sticker-clear .anno-sticker-label { font-size: 9px; margin-top: 1px; }
+        .anno-sticker-img { width: 32px; height: 32px; object-fit: contain; border-radius: 4px; }
+        .anno-sticker-upload { font-size: 11px; color: #409eff; background: #f0f7ff; border-style: dashed; cursor: pointer; }
+        .anno-sticker-upload:hover { background: #e0f0ff; }
+
+        /* 浮动「➕ 批注」按钮 —— fixed 定位（x/y 已是绝对页面坐标，不依赖父级） */
+        .anno-float-btn {
+            position: fixed; transform: translate(-50%, -100%);
+            background: #409eff; color: #fff; padding: 5px 14px; border-radius: 16px;
+            font-size: 12.5px; cursor: pointer; user-select: none; z-index: 1500;
+            box-shadow: 0 2px 12px rgba(64, 158, 255, .35); white-space: nowrap;
+            transition: background .15s;
+        }
+        .anno-float-btn:hover { background: #337ecc; }
+        .anno-float-btn::after {
+            content: ''; position: absolute; left: 50%; top: 100%; transform: translateX(-50%);
+            border: 6px solid transparent; border-top-color: #409eff;
+        }
+
+        /* 编辑 Dialog 内部样式 */
+        .anno-edit-section { margin-bottom: 14px; }
+        .anno-edit-label { font-size: 12.5px; color: #606266; margin-bottom: 6px; }
+        .anno-edit-quote {
+            background: #f5f7fa; border-left: 3px solid #409eff; padding: 8px 10px;
+            border-radius: 4px; font-size: 13px; color: #303133; line-height: 1.6;
+            max-height: 120px; overflow-y: auto; white-space: pre-wrap; word-break: break-word;
+        }
+        .anno-color-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .anno-color-swatch {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 44px; height: 30px; border-radius: 6px; cursor: pointer;
+            border: 2px solid transparent; font-size: 12.5px; color: #303133;
+            transition: transform .12s;
+        }
+        .anno-color-swatch:hover { transform: translateY(-1px); }
+        .anno-color-swatch.selected { box-shadow: 0 0 0 2px rgba(255,255,255,.7) inset; font-weight: 600; }
+        /* 自定义调色盘 */
+        .anno-color-custom { position: relative; overflow: hidden; }
+        .anno-color-picker {
+            position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+        }
+        /* 划线颜色行 */
+        .anno-line-group { display: flex; flex-direction: column; gap: 8px; }
+        .anno-linecolor-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .anno-lc-label { font-size: 12.5px; color: #606266; margin-right: 2px; }
+        .anno-lc-swatch {
+            width: 22px; height: 22px; border-radius: 4px; cursor: pointer;
+            border: 2px solid transparent; transition: transform .1s; position: relative; overflow: hidden;
+        }
+        .anno-lc-swatch:hover { transform: scale(1.1); }
+        .anno-lc-swatch.selected { border-color: #303133; box-shadow: 0 0 0 1.5px #fff inset; }
+        .anno-lc-custom { display: inline-flex; align-items: center; justify-content: center; }
+        .anno-lc-custom .anno-color-picker { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .anno-lc-custom span { font-size: 12px; }
+        /* 贴纸折叠面板 */
+        .anno-sticker-toggle { display: flex; align-items: center; gap: 8px; }
+        /* 标记方式按钮 */
+        .anno-borderstyle-row { display: flex; gap: 10px; }
+        .anno-bs-btn { padding: 6px 16px; border: 1.5px solid #dcdfe6; background: #fff; border-radius: 6px; cursor: pointer; font-size: 13px; color: #606266; transition: all .12s; }
+        .anno-bs-btn:hover { border-color: #409eff; color: #409eff; }
+        .anno-bs-btn.selected { border-color: #409eff; background: #ecf5ff; color: #409eff; font-weight: 600; }
+        /* 文字样式行 */
+        .anno-txtstyle-row { display: flex; align-items: center; gap: 8px; }
+        .anno-ts-btn { width: 32px; height: 32px; border: 1.5px solid #dcdfe6; background: #fff; border-radius: 6px; cursor: pointer; font-size: 14px; color: #606266; display: flex; align-items: center; justify-content: center; }
+        .anno-ts-btn.active { border-color: #409eff; background: #ecf5ff; color: #409eff; }
+        .anno-font-select { padding: 5px 8px; border: 1.5px solid #dcdfe6; border-radius: 6px; font-size: 13px; color: #606266; background: #fff; cursor: pointer; outline: none; }
+        .anno-font-select:focus { border-color: #409eff; }
+        /* WPS 风格文字工具栏 */
+        .anno-toolbar {
+            display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+            padding: 8px; background: #f5f7fa; border: 1px solid #ebeef5; border-radius: 8px;
+        }
+        .anno-tb-group { display: flex; align-items: center; gap: 4px; }
+        .anno-tb-select {
+            height: 30px; padding: 0 8px; border: 1px solid #dcdfe6; border-radius: 4px;
+            background: #fff; font-size: 13px; color: #303133; cursor: pointer; outline: none;
+        }
+        .anno-tb-select:focus { border-color: #409eff; }
+        .anno-tb-font { width: 130px; }
+        .anno-tb-size { width: 64px; }
+        .anno-tb-btn {
+            width: 30px; height: 30px; border: 1px solid transparent; border-radius: 4px;
+            background: transparent; font-size: 13px; color: #303133; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+            transition: all .12s;
+        }
+        .anno-tb-btn:hover { background: #ecf5ff; border-color: #d9ecff; }
+        .anno-tb-btn.active { background: #ecf5ff; border-color: #409eff; color: #409eff; }
+        .anno-tb-bold { font-weight: 700; }
+        .anno-tb-italic { font-style: italic; }
+        .anno-tb-upload {
+            width: 30px; height: 30px; border: 1px dashed #dcdfe6; border-radius: 4px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 14px; cursor: pointer; background: #fff; transition: all .12s;
+        }
+        .anno-tb-upload:hover { border-color: #409eff; background: #ecf5ff; }
+        .anno-tb-sep { width: 1px; height: 20px; background: #dcdfe6; margin: 0 2px; }
+        /* 圈框/箭头素材库 */
+        .anno-material-row { display: flex; flex-direction: column; gap: 4px; }
+        .anno-material-grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .anno-material-item { position: relative; width: 44px; height: 44px; border: 1.5px solid #dcdfe6; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; background: #fafbfc; overflow: hidden; }
+        .anno-material-item.selected { border-color: #409eff; background: #ecf5ff; }
+        .anno-material-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .anno-material-del { position: absolute; top: -4px; right: -4px; width: 14px; height: 14px; line-height: 14px; text-align: center; background: #f56c6c; color: #fff; border-radius: 50%; font-size: 9px; cursor: pointer; }
+        .anno-material-upload { width: 44px; height: 44px; border: 1.5px dashed #c0c4cc; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #909399; cursor: pointer; }
+        .anno-material-upload:hover { border-color: #409eff; color: #409eff; }
+        .anno-material-hint { font-size: 11px; color: #909399; }
+        /* 箭头方向按钮 */
+        .anno-arrowdir-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+        .anno-ad-label { font-size: 12px; color: #909399; }
+        .anno-ad-btn { padding: 3px 10px; border: 1px solid #dcdfe6; background: #fff; border-radius: 4px; font-size: 12px; cursor: pointer; color: #606266; }
+        .anno-ad-btn.active { border-color: #409eff; background: #ecf5ff; color: #409eff; }
+        /* 圈注箭头组合预览 */
+        .anno-arrow-preview {
+            position: relative; width: 100%; height: 160px; margin-top: 10px;
+            background: #fafafa; border: 1px dashed #dcdfe6; border-radius: 8px; overflow: hidden;
+        }
+        .anno-ap-frame {
+            position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            border: 2px solid #c0c4cc;
+        }
+        .anno-ap-frame.has-frame { border: none; border-radius: 0; padding: 0; background-color: transparent; }
+        .anno-ap-frame-text { font-size: 12px; color: #303133; white-space: nowrap; line-height: 1; }
+        .anno-ap-arrow { position: absolute; pointer-events: none; }
+        .anno-ap-svg {
+            position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+            pointer-events: none; overflow: visible;
+        }
+        .anno-ap-note {
+            position: absolute; max-width: 120px; padding: 4px 8px; font-size: 12px;
+            background: #fff; color: #303133; border-radius: 6px; border: 1px solid #ebeef5;
+            box-shadow: 0 2px 8px rgba(0,0,0,.12); line-height: 1.4;
+        }
+        .anno-ap-note[data-dir="right"] { transform: translate(6px, -50%); }
+        .anno-ap-note[data-dir="left"]  { transform: translate(calc(-100% - 6px), -50%); }
+        .anno-ap-note[data-dir="down"]  { transform: translate(-50%, 6px); }
+        .anno-ap-note[data-dir="up"]    { transform: translate(-50%, calc(-100% - 6px)); }
+        .anno-sticker-current {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 12px; border: 1px solid #dcdfe6; border-radius: 6px;
+            background: #fff; cursor: pointer; font-size: 14px; transition: border-color .15s;
+        }
+        .anno-sticker-current:hover { border-color: #409eff; }
+        .anno-sticker-preview-emoji { font-size: 22px; }
+        .anno-sticker-preview-img { width: 32px; height: 32px; border-radius: 4px; object-fit: cover; }
+        .anno-sticker-preview-none { color: #909399; }
+        .anno-sticker-toggle-arrow { color: #909399; font-size: 11px; }
+        .anno-sticker-clear-btn { padding: 4px 10px; font-size: 12px; border: 1px solid #f56c6c; color: #f56c6c; background: #fff; border-radius: 4px; cursor: pointer; }
+        .anno-sticker-clear-btn:hover { background: #fef0f0; }
+        .anno-sticker-panel {
+            margin-top: 8px; padding: 10px; border: 1px solid #ebeef5; border-radius: 6px;
+            background: #fafbfc; max-height: 260px; overflow-y: auto;
+        }
+        .anno-sticker-group { margin-bottom: 8px; }
+        .anno-sticker-group:last-child { margin-bottom: 0; }
+        .anno-sticker-group-label { font-size: 11.5px; color: #909399; display: block; margin-bottom: 4px; }
+        .anno-sticker-panel .anno-sticker-btn {
+            width: 34px; height: 34px; margin: 2px; border: 1px solid transparent; border-radius: 4px;
+            background: #fff; cursor: pointer; font-size: 18px; transition: border-color .12s;
+        }
+        .anno-sticker-panel .anno-sticker-btn:hover { border-color: #409eff; }
+        .anno-sticker-panel .anno-sticker-btn.selected { border-color: #409eff; background: #ecf5ff; }
+        .anno-sticker-img { width: 24px; height: 24px; border-radius: 3px; object-fit: cover; }
+        .anno-sticker-upload {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 34px; height: 34px; margin: 2px; border: 1.5px dashed #c0c4cc; border-radius: 4px;
+            color: #909399; cursor: pointer; font-size: 11px;
+        }
+        .anno-sticker-upload:hover { border-color: #409eff; color: #409eff; }
+        /* ===== Popover 贴纸选择器 ===== */
+        .anno-sticker-popover { padding: 0 !important; border-radius: 8px !important; overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,.12) !important; aspect-ratio: 4 / 3; }
+        .anno-sticker-popover-body { padding: 10px; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; position: relative; }
+        /* 16:9 比例容器 */
+        .anno-sticker-popover-body .anno-sticker-emoji-cats { flex-shrink: 0; }
+        .anno-sticker-grid-wrap { flex: 1; min-height: 0; overflow-y: auto; }
+        .anno-sticker-footer { flex-shrink: 0; }
+        .anno-sticker-tabs { display: flex; gap: 4px; margin-bottom: 10px; border-bottom: 1px solid #ebeef5; padding-bottom: 8px; }
+        .anno-sticker-tabs-text { border-bottom: none; padding-bottom: 0; margin-bottom: 6px; }
+        .anno-sticker-tab-text {
+            font-size: 13px; color: #909399; cursor: pointer; padding: 4px 8px; border-bottom: 2px solid transparent;
+            transition: color .12s;
+        }
+        .anno-sticker-tab-text:hover { color: #409eff; }
+        .anno-sticker-tab-text.active { color: #409eff; border-bottom-color: #409eff; font-weight: 600; }
+        .anno-sticker-popover-close {
+            position: absolute; top: 8px; right: 10px; width: 18px; height: 18px; line-height: 18px;
+            text-align: center; font-size: 12px; color: #c0c4cc; cursor: pointer; z-index: 3; border-radius: 50%;
+        }
+        .anno-sticker-popover-close:hover { color: #f56c6c; background: #fef0f0; }
+        .anno-sticker-tab {
+            flex: 1; padding: 5px 8px; font-size: 12px; border: none; border-radius: 4px;
+            background: #f5f7fa; color: #606266; cursor: pointer; transition: all .12s;
+        }
+        .anno-sticker-tab:hover { background: #ecf5ff; color: #409eff; }
+        .anno-sticker-tab.active { background: #409eff; color: #fff; }
+        .anno-sticker-grid { display: flex; flex-wrap: wrap; gap: 4px; max-height: 200px; overflow-y: auto; padding: 2px; }
+        .anno-sticker-grid .anno-sticker-btn {
+            width: 36px; height: 36px; margin: 0; border: 1px solid transparent; border-radius: 6px;
+            background: #fff; cursor: pointer; font-size: 20px; transition: all .12s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .anno-sticker-grid .anno-sticker-btn:hover { border-color: #409eff; background: #ecf5ff; transform: scale(1.1); }
+        .anno-sticker-grid .anno-sticker-btn.selected { border-color: #409eff; background: #ecf5ff; box-shadow: 0 0 0 1.5px #409eff inset; }
+        .anno-sticker-img-btn img { width: 28px; height: 28px; border-radius: 4px; object-fit: cover; }
+        .anno-sticker-empty { font-size: 12px; color: #909399; text-align: center; width: 100%; padding: 20px 0; }
+        .anno-sticker-footer {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 10px; padding-top: 8px; border-top: 1px solid #ebeef5;
+        }
+        .anno-sticker-upload-btn {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 10px; font-size: 12px; border: 1px solid #409eff; border-radius: 4px;
+            background: #ecf5ff; color: #409eff; cursor: pointer;
+        }
+        .anno-sticker-upload-btn:hover { background: #d9ecff; }
+        .anno-sticker-hint { font-size: 11px; color: #c0c4cc; }
+        .anno-sticker-emoji-input-row { display: flex; align-items: center; gap: 4px; flex: 1; }
+        .anno-sticker-emoji-input {
+            flex: 1; padding: 3px 8px; font-size: 13px; border: 1px solid #dcdfe6; border-radius: 4px;
+            outline: none; min-width: 0;
+        }
+        .anno-sticker-emoji-input:focus { border-color: #409eff; }
+        .anno-sticker-emoji-add {
+            padding: 3px 8px; font-size: 13px; border: 1px solid #409eff; border-radius: 4px;
+            background: #409eff; color: #fff; cursor: pointer; line-height: 1;
+        }
+        .anno-sticker-emoji-add:hover { background: #337ecc; }
+        /* Emoji 分类 tab */
+        .anno-sticker-emoji-cats {
+            display: flex; gap: 4px; overflow-x: auto; margin-bottom: 8px;
+            padding-bottom: 4px; -webkit-overflow-scrolling: touch;
+        }
+        .anno-sticker-cat-btn {
+            flex-shrink: 0; padding: 3px 10px; font-size: 12px; border: none; border-radius: 12px;
+            background: #f5f7fa; color: #606266; cursor: pointer; transition: all .12s;
+        }
+        .anno-sticker-cat-btn:hover { background: #ecf5ff; color: #409eff; }
+        .anno-sticker-cat-btn.active { background: #409eff; color: #fff; }
+        /* 纯文字分类 */
+        .anno-sticker-emoji-cats-text { background: none; padding: 0; border: none; }
+        .anno-sticker-cat-text {
+            font-size: 12px; color: #909399; cursor: pointer; padding: 4px 10px; white-space: nowrap;
+            border-bottom: 2px solid transparent; transition: color .12s;
+        }
+        .anno-sticker-cat-text:hover { color: #409eff; }
+        .anno-sticker-cat-text.active { color: #409eff; border-bottom-color: #409eff; font-weight: 600; }
+        /* 可删贴纸容器 */
+        .anno-sticker-btn-wrap { position: relative; display: inline-block; margin: 2px; }
+        .anno-sticker-btn-wrap .anno-sticker-btn { margin: 0; }
+        .anno-sticker-del {
+            position: absolute; top: -4px; right: -4px; width: 14px; height: 14px;
+            font-size: 10px; line-height: 14px; text-align: center;
+            background: #f56c6c; color: #fff; border-radius: 50%;
+            cursor: pointer; z-index: 2;
+        }
+        .anno-sticker-btn-wrap:hover .anno-sticker-del { background: #d33; }
+        /* 删除旧的 anno-c-* class（现在用 inline style 了） */
+        /* double-dashed 用 CSS 变量 */
+        .anno-line-double-dashed {
+            background-image: repeating-linear-gradient(to bottom, var(--anno-lc, #303133) 0, var(--anno-lc, #303133) 2px, transparent 2px, transparent 4px),
+                              repeating-linear-gradient(to bottom, var(--anno-lc, #303133) 0, var(--anno-lc, #303133) 2px, transparent 2px, transparent 4px);
+            background-position: 0 100%, 0 calc(100% - 5px);
+            background-repeat: no-repeat;
+            background-size: 100% 2px;
+            text-decoration: none !important;
+            padding-bottom: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .anno-edit-dialog { width: 94% !important; max-width: 94vw !important; }
+            .anno-tip { display: none; }   /* 手机端空间紧张，隐藏提示 */
+            .anno-color-swatch { width: 38px; height: 28px; }
+            .anno-render-area { font-size: 13px; padding: 8px 10px; }
+            .anno-float-btn { font-size: 12px; padding: 4px 12px; }
+        }
+        /* ===== 批注编辑框：全屏 + WPS 工具栏 ===== */
+        .el-dialog.anno-edit-fullscreen, body.mode-mobile .el-dialog.anno-edit-fullscreen { margin: 0 !important; width: 100% !important; max-width: 100% !important; height: 100vh !important; max-height: 100vh !important; border-radius: 0 !important; }
+        .el-dialog.anno-edit-fullscreen .el-dialog__body { height: calc(100vh - 110px); overflow-y: auto; padding: 12px 20px; }
+        .anno-edit-fullscreen .el-dialog__header { padding: 12px 20px; margin: 0; border-bottom: 1px solid #ebeef5; }
+        .anno-wps-toolbar {
+            display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; overflow-x: auto;
+            padding: 8px 10px; background: #f5f7fa; border: 1px solid #ebeef5; border-radius: 8px; margin-bottom: 14px;
+        }
+        .anno-wps-group { display: flex; align-items: center; gap: 2px; }
+        .anno-wps-btn {
+            height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 5px;
+            background: #fff; font-size: 13px; color: #303133; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 4px; transition: all .12s; white-space: nowrap;
+        }
+        .anno-wps-btn:hover { background: #ecf5ff; border-color: #d9ecff; }
+        .anno-wps-btn.active { background: #ecf5ff; border-color: #409eff; color: #409eff; }
+        .anno-wps-bold { font-weight: 700; }
+        .anno-wps-italic { font-style: italic; }
+        .anno-wps-iconbtn {
+            width: 32px; height: 32px; border: 1px solid #dcdfe6; border-radius: 5px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 13px; cursor: pointer; background: #fff; transition: all .12s;
+        }
+        .anno-wps-iconbtn:hover { border-color: #409eff; background: #ecf5ff; }
+        .anno-wps-select {
+            height: 32px; padding: 0 8px; border: 1px solid #dcdfe6; border-radius: 5px;
+            background: #fff; font-size: 13px; color: #303133; cursor: pointer; outline: none;
+        }
+        .anno-wps-select:focus { border-color: #409eff; }
+        .anno-wps-font { width: 130px; }
+        .anno-wps-size { width: 62px; }
+        .anno-wps-sep { width: 1px; height: 20px; background: #dcdfe6; margin: 0 3px; }
+        .anno-wps-icon-hl { display:inline-block; width:14px; height:14px; border:1px solid #c0c4cc; border-radius:2px; }
+        .anno-wps-icon-line { display:inline-block; width:14px; text-align:center; font-weight:700; text-decoration: underline; }
+        .anno-wps-icon-frame, .anno-wps-icon-arrow { display:inline-block; width:14px; text-align:center; }
+        .anno-wps-preview { margin-bottom: 14px; }
+        .anno-wps-preview-label { font-size: 13px; color: #606266; margin-bottom: 6px; font-weight: 600; }
+        .anno-wps-note { margin-bottom: 14px; }
+        .anno-wps-popover { padding: 12px !important; }
+
         .folder-pick-row { display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #ebeef5; border-radius:8px; cursor:pointer; transition: all .15s; }
         .folder-pick-row:hover { border-color:#409eff; background:#f5f9ff; }
         .folder-pick-row.selected { border-color:#67c23a; background:#f0f9eb; }
@@ -1217,12 +1760,59 @@
             globalUsersDirHandle: null,   // 根/系统数据/全局用户
             userDirHandle: null,          // 根/系统数据/全局用户/u_xxx
             userData: {
-                profile: { nickname: '', bio: '', avatarName: '' },
+                profile: { nickname: '', bio: '', avatarName: '', avatarFrame: '' },
                 favorites: { folders: [] },
                 likes: { items: [] },
                 tags: { tags: [], links: [] },
-                history: { browse: [], search: [] }
+                history: { browse: [], search: [] },
+                annotations: { items: {} },   // items[weiboId] = [ { id, start, end, color, lineStyle, stickerId, text, note, createdAt } ]
+                stickers: [],                 // [{ id, type:'emoji'|'image', content:'😀'|base64, name }] — 用户自定义贴纸
+                circleFrames: [],             // [{ id, name, type:'png'|'svg', base64 }] — 圈框素材
+                arrows: [],                   // [{ id, name, type:'png'|'svg', base64 }] — 箭头素材
+                userFonts: [],                // [{ id, name, family, base64 }] — 用户上传字体
+                customAvatarFrames: []        // [{ id, name, type:'css'|'png'|'svg', css/base64 }] — 用户自上传头像框
             },
+            // ===== 划线批注功能 =====
+            // 当前展开批注模式的微博 ID（同时只允许一条进入批注模式，避免渲染压力）
+            activeAnnoWeiboId: null,
+            // 浮动「➕ 批注」按钮
+            annoFloatBtn: { visible: false, x: 0, y: 0, weiboId: '', selStart: -1, selEnd: -1, selText: '' },
+            // 批注编辑 Dialog
+            annoEdit: {
+                visible: false,
+                weiboId: '',
+                annoId: '',          // 空表示新增
+                start: 0,
+                end: 0,
+                color: 'yellow',     // 高亮背景色（预设 key 或自定义 '#hex'）
+                lineStyle: 'underline',
+                lineColor: '#303133', // 划线颜色（独立于背景色，默认深灰）
+                borderStyle: 'highlight', // 'highlight' 背景高亮 | 'circle' 圆圈框注
+                bold: false,         // 文字加粗
+                italic: false,       // 文字斜体
+                fontFamily: '',      // 字体（空=默认，可选系统字体）
+                fontSize: 14,        // 字号（px）
+                circleFrameId: '',   // 圈注时使用的圈框素材 id
+                arrowId: '',         // 圈注时使用的箭头素材 id
+                arrowDir: 'right',   // 箭头方向：right(右上) | left(左上) | down | up
+                noteOffset: { x: 0, y: 0 },  // 文字批注相对箭头末端的偏移（拖拽调整）
+                stickerId: '',       // 关联贴纸 id（空表示无贴纸）
+                text: '',            // 被划线的原文快照
+                note: '',            // 批注内容（支持 emoji）
+                createdAt: '',
+                isNew: true,
+                _stickerPanelOpen: false,  // 贴纸 Popover 显示状态
+                _stickerTab: 'emoji',      // 贴纸 Popover 当前标签页
+                _stickerEmojiCat: '常用',  // Emoji 分类
+                _customEmojiInput: '',     // 贴纸 Popover 自定义 emoji 输入
+                _hlPopupOpen: false,       // 高亮颜色弹窗
+                _linePopupOpen: false,     // 划线样式弹窗
+                _framePopupOpen: false,    // 圈框素材弹窗
+                _arrowPopupOpen: false     // 箭头素材弹窗
+            },
+            // 批注 hover tooltip（全局 fixed 定位）
+            // mode: 'sticker' → hover 时显示贴纸；'note' → 单击时显示文字批注内容
+            annoTooltip: { visible: false, x: 0, y: 0, mode: 'sticker', sticker: null, note: '', createdAt: '', matched: true, arrowFromX: 0, arrowFromY: 0, arrowToX: 0, arrowToY: 0, arrowDir: 'right', arrowAngle: 0, arrowBase64: '' },
             profileTab: 'favorites',
             profileTopTab: 'fav',   // 手机端外层 tab: 'fav'(收藏) / 'account'(账号+备份)
             folderDialogVisible: false,
@@ -1237,6 +1827,32 @@
             tagDialogTarget: null,
             tagFormSelected: [],
             avatarUrl: '',
+            // 头像框选择弹窗
+            framePickerVisible: false,
+            // 头像裁剪弹窗：选完图打开，可拖动+缩放，1:1 输出 256x256
+            avatarCrop: {
+                visible: false,
+                source: '',           // 临时 dataURL
+                naturalW: 0,
+                naturalH: 0,
+                scale: 1,
+                dx: 0,
+                dy: 0,
+                stageSize: 300,       // 舞台边长（px）
+                minScale: 1,
+                maxScale: 8,
+                // 拖拽中临时状态
+                dragStartX: 0,
+                dragStartY: 0,
+                dragStartDx: 0,
+                dragStartDy: 0,
+                dragging: false,
+                // 触屏双指
+                pinchStartDist: 0,
+                pinchStartScale: 1,
+                pinchCenterX: 0,
+                pinchCenterY: 0
+            },
             // 外链媒体代理：默认官方云端转发服务（开箱即用），无用户配置入口
             mediaProxy: DEFAULT_MEDIA_PROXY,
             linkRiskConfirmed: false,
@@ -2993,9 +3609,12 @@
                 const handleAccountLogout = async () => {
                     appState.currentUser = null;
                     appState.userDirHandle = null;
-                    appState.userData = { profile: { nickname: '', bio: '', avatarName: '' }, favorites: { folders: [] }, likes: { items: [] }, tags: { tags: [], links: [] }, history: { browse: [], search: [] } };
+                    appState.userData = { profile: { nickname: '', bio: '', avatarName: '' }, favorites: { folders: [] }, likes: { items: [] }, tags: { tags: [], links: [] }, history: { browse: [], search: [] }, annotations: { items: {} }, stickers: [] };
                     appState.avatarUrl = '';
                     appState.snapshotUrlMap = {};
+                    appState.activeAnnoWeiboId = null;
+                    appState.annoFloatBtn.visible = false;
+                    appState.annoEdit.visible = false;
                     appState.authStep = 1;
                     localStorage.removeItem('weibo_tool_session_v2');
                     regenerateCaptcha();
@@ -3036,6 +3655,8 @@
                     await IDB.kvSet(uid + ':tags', { version: '2.0', tags: appState.userData.tags.tags, links: appState.userData.tags.links });
                     await IDB.kvSet(uid + ':history', { version: '2.0', browse: appState.userData.history.browse, search: appState.userData.history.search });
                     await IDB.kvSet(uid + ':settings', { version: '1.1', mediaProxy: appState.mediaProxy || '', linkRiskConfirmed: !!appState.linkRiskConfirmed });
+                    await IDB.kvSet(uid + ':annotations', { version: '1.0', items: appState.userData.annotations.items || {} });
+                    await IDB.kvSet(uid + ':stickers', { version: '1.0', stickers: appState.userData.stickers || [] });
                 }
                 async function loadUserData() {
                     if (!appState.currentUser) return;
@@ -3046,6 +3667,8 @@
                     const tags = await IDB.kvGet(uid + ':tags', null);
                     const history = await IDB.kvGet(uid + ':history', null);
                     const settings = await IDB.kvGet(uid + ':settings', null);
+                    const annotations = await IDB.kvGet(uid + ':annotations', null);
+                    const stickers = await IDB.kvGet(uid + ':stickers', null);
                     // 1.1 版设置：尊重用户显式选择（含手动清空）；老版本/无设置记录：默认官方 Worker，已自配代理的保留
                     if (settings && settings.version === '1.1') {
                         appState.mediaProxy = settings.mediaProxy || '';
@@ -3054,10 +3677,26 @@
                     }
                     appState.linkRiskConfirmed = !!(settings && settings.linkRiskConfirmed);
                     appState.userData.profile = profile || { nickname: appState.currentUser.nickname, bio: '', avatarMediaId: '' };
+                    // 兼容老数据：补全 avatarFrame 字段
+                    if (appState.userData.profile && !('avatarFrame' in appState.userData.profile)) {
+                        appState.userData.profile.avatarFrame = '';
+                    }
                     appState.userData.favorites = (favorites && Array.isArray(favorites.folders)) ? { folders: favorites.folders } : { folders: [] };
                     appState.userData.likes = (likes && Array.isArray(likes.items)) ? { items: likes.items } : { items: [] };
                     appState.userData.tags = (tags && Array.isArray(tags.tags)) ? { tags: tags.tags, links: Array.isArray(tags.links) ? tags.links : [] } : { tags: [], links: [] };
                     appState.userData.history = (history && Array.isArray(history.browse)) ? { browse: history.browse, search: Array.isArray(history.search) ? history.search : [] } : { browse: [], search: [] };
+                    // 批注数据：兼容老版本（无该字段时初始化为空对象）
+                    appState.userData.annotations = (annotations && annotations.items && typeof annotations.items === 'object') ? { items: annotations.items } : { items: {} };
+                    appState.userData.stickers = (stickers && Array.isArray(stickers.stickers)) ? stickers.stickers : [];
+                    // 圈框/箭头素材：如果用户没存过，用系统默认素材
+                    if (!appState.userData.circleFrames || appState.userData.circleFrames.length === 0) {
+                        appState.userData.circleFrames = DEFAULT_CIRCLE_FRAMES.map(f => ({...f}));
+                    }
+                    if (!appState.userData.arrows || appState.userData.arrows.length === 0) {
+                        appState.userData.arrows = DEFAULT_ARROWS.map(a => ({...a}));
+                    }
+                    if (!appState.userData.userFonts) appState.userData.userFonts = [];
+                    restoreUserFonts();
                     await loadAvatarUrl();
                     await hydrateSnapshotImages();
                 }
@@ -3078,15 +3717,1174 @@
                         if (blob) appState.avatarUrl = URL.createObjectURL(blob);
                     } catch (e) {}
                 }
+                // Image 对象挂在 setup 闭包内（不入 Vue 响应式）
+                let avatarCropImg = null;
+                // 原文件直接保存的旧实现被替换为「选完图 → 弹出裁剪 → 确认后保存」
                 async function handleAvatarUpload(ev) {
                     const file = ev.target.files && ev.target.files[0];
-                    if (!file || !appState.currentUser) return;
-                    const mediaId = await IDB.mediaBlobPut(file);
-                    appState.userData.profile.avatarMediaId = mediaId;
-                    await saveUserDataNow();
-                    await loadAvatarUrl();
-                    showToast('头像已更新', 'success');
+                    if (!file) return;
+                    ev.target.value = '';  // 立即清空，确保取消裁剪后再次选同一文件仍能触发 change
+                    if (!appState.currentUser) return;
+                    if (!file.type.startsWith('image/')) {
+                        showToast('请选择图片文件', 'warning');
+                        return;
+                    }
+                    try {
+                        // 读为 dataURL，喂给 Image 对象
+                        const dataUrl = await new Promise((resolve, reject) => {
+                            const fr = new FileReader();
+                            fr.onload = () => resolve(String(fr.result || ''));
+                            fr.onerror = () => reject(fr.error);
+                            fr.readAsDataURL(file);
+                        });
+                        const img = new Image();
+                        img.onload = () => {
+                            avatarCropImg = img;
+                            const S = appState.avatarCrop.stageSize;
+                            const nW = img.naturalWidth || img.width;
+                            const nH = img.naturalHeight || img.height;
+                            const minScale = Math.max(S / nW, S / nH);
+                            const scale = minScale;
+                            const dx = (S - nW * scale) / 2;
+                            const dy = (S - nH * scale) / 2;
+                            Object.assign(appState.avatarCrop, {
+                                source: dataUrl,
+                                naturalW: nW, naturalH: nH,
+                                scale: scale, minScale: minScale, maxScale: Math.max(minScale * 8, minScale + 1),
+                                dx: dx, dy: dy,
+                                dragging: false,
+                                visible: true
+                            });
+                        };
+                        img.onerror = () => showToast('图片加载失败', 'error');
+                        img.src = dataUrl;
+                    } catch (e) {
+                        showToast('读取图片失败', 'error');
+                    }
+                }
+                // 拖拽边界限制：图片必须始终覆盖 stage
+                function clampAvatarCropDxDy(dx, dy, scale) {
+                    const c = appState.avatarCrop;
+                    const S = c.stageSize;
+                    const nW = c.naturalW, nH = c.naturalH;
+                    const dw = nW * scale, dh = nH * scale;
+                    let nx = dx, ny = dy;
+                    if (dw >= S) nx = Math.min(0, Math.max(S - dw, nx));
+                    else          nx = (S - dw) / 2;
+                    if (dh >= S) ny = Math.min(0, Math.max(S - dh, ny));
+                    else          ny = (S - dh) / 2;
+                    return { dx: nx, dy: ny };
+                }
+                // Pointer 事件统一处理 PC 鼠标 + 移动单指拖动
+                function onAvatarCropPointerDown(ev) {
+                    if (ev.pointerType === 'touch' && ev.isPrimary === false) return; // 非主指 → 让 touch 事件处理
+                    const c = appState.avatarCrop;
+                    c.dragging = true;
+                    c.dragStartX = ev.clientX;
+                    c.dragStartY = ev.clientY;
+                    c.dragStartDx = c.dx;
+                    c.dragStartDy = c.dy;
+                    try { ev.target.setPointerCapture(ev.pointerId); } catch (e) {}
+                }
+                function onAvatarCropPointerMove(ev) {
+                    const c = appState.avatarCrop;
+                    if (!c.dragging) return;
+                    const ddx = ev.clientX - c.dragStartX;
+                    const ddy = ev.clientY - c.dragStartY;
+                    const clamped = clampAvatarCropDxDy(c.dragStartDx + ddx, c.dragStartDy + ddy, c.scale);
+                    c.dx = clamped.dx;
+                    c.dy = clamped.dy;
+                }
+                function onAvatarCropPointerUp(ev) {
+                    const c = appState.avatarCrop;
+                    c.dragging = false;
+                    try { ev.target.releasePointerCapture && ev.target.releasePointerCapture(ev.pointerId); } catch (e) {}
+                }
+                // 滚轮缩放（按鼠标位置）
+                function onAvatarCropWheel(ev) {
+                    ev.preventDefault();
+                    const c = appState.avatarCrop;
+                    if (!c || !c.source) return;
+                    const rect = ev.currentTarget.getBoundingClientRect();
+                    const mx = ev.clientX - rect.left;
+                    const my = ev.clientY - rect.top;
+                    const factor = ev.deltaY < 0 ? 1.08 : (ev.deltaY > 0 ? 1/1.08 : 1);
+                    let newScale = c.scale * factor;
+                    newScale = Math.max(c.minScale, Math.min(c.maxScale, newScale));
+                    // 以鼠标点为锚点：保持鼠标点对应的源像素位置不变
+                    const sx = (mx - c.dx) / c.scale;
+                    const sy = (my - c.dy) / c.scale;
+                    let newDx = mx - sx * newScale;
+                    let newDy = my - sy * newScale;
+                    const clamped = clampAvatarCropDxDy(newDx, newDy, newScale);
+                    c.scale = newScale;
+                    c.dx = clamped.dx;
+                    c.dy = clamped.dy;
+                }
+                // 触屏双指捏合
+                function onAvatarCropTouchStart(ev) {
+                    const c = appState.avatarCrop;
+                    if (ev.touches.length === 2) {
+                        c.dragging = false; // 切换为双指模式
+                        const t1 = ev.touches[0], t2 = ev.touches[1];
+                        const dx = t2.clientX - t1.clientX, dy = t2.clientY - t1.clientY;
+                        c.pinchStartDist = Math.hypot(dx, dy);
+                        c.pinchStartScale = c.scale;
+                        const rect = ev.currentTarget.getBoundingClientRect();
+                        c.pinchCenterX = ((t1.clientX + t2.clientX) / 2) - rect.left;
+                        c.pinchCenterY = ((t1.clientY + t2.clientY) / 2) - rect.top;
+                        ev.preventDefault();
+                    }
+                }
+                function onAvatarCropTouchMove(ev) {
+                    const c = appState.avatarCrop;
+                    if (ev.touches.length === 2 && c.pinchStartDist > 0) {
+                        const t1 = ev.touches[0], t2 = ev.touches[1];
+                        const dx = t2.clientX - t1.clientX, dy = t2.clientY - t1.clientY;
+                        const dist = Math.hypot(dx, dy);
+                        let newScale = c.pinchStartScale * (dist / c.pinchStartDist);
+                        newScale = Math.max(c.minScale, Math.min(c.maxScale, newScale));
+                        const sx = (c.pinchCenterX - c.dx) / c.scale;
+                        const sy = (c.pinchCenterY - c.dy) / c.scale;
+                        let newDx = c.pinchCenterX - sx * newScale;
+                        let newDy = c.pinchCenterY - sy * newScale;
+                        const clamped = clampAvatarCropDxDy(newDx, newDy, newScale);
+                        c.scale = newScale;
+                        c.dx = clamped.dx;
+                        c.dy = clamped.dy;
+                        ev.preventDefault();
+                    }
+                }
+                function onAvatarCropTouchEnd(ev) {
+                    const c = appState.avatarCrop;
+                    if (ev.touches.length < 2) {
+                        c.pinchStartDist = 0;
+                    }
+                }
+                // 确认裁剪：将 stage 当前显示的方形区域画到 256x256 canvas
+                async function confirmAvatarCrop() {
+                    const c = appState.avatarCrop;
+                    if (!avatarCropImg) { showToast('图片未加载', 'warning'); return; }
+                    const S = c.stageSize;
+                    const sx = (-c.dx) / c.scale;
+                    const sy = (-c.dy) / c.scale;
+                    const sw = S / c.scale;  // 1:1，方形
+                    // 防御性 clamp
+                    const sx2 = Math.max(0, Math.min(c.naturalW - sw, sx));
+                    const sy2 = Math.max(0, Math.min(c.naturalH - sw, sy));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 256; canvas.height = 256;
+                    const ctx = canvas.getContext('2d');
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(avatarCropImg, sx2, sy2, sw, sw, 0, 0, 256, 256);
+                    canvas.toBlob(async (blob) => {
+                        if (!blob) { showToast('裁剪失败', 'error'); return; }
+                        try {
+                            const file = new File([blob], 'avatar.png', { type: 'image/png' });
+                            const mediaId = await IDB.mediaBlobPut(file);
+                            appState.userData.profile.avatarMediaId = mediaId;
+                            await saveUserDataNow();
+                            await loadAvatarUrl();
+                            showToast('头像已更新', 'success');
+                        } catch (e) {
+                            showToast('保存头像失败', 'error');
+                        } finally {
+                            closeAvatarCrop();
+                        }
+                    }, 'image/png', 0.92);
+                }
+                function closeAvatarCrop() {
+                    const c = appState.avatarCrop;
+                    c.visible = false;
+                    c.source = '';
+                    avatarCropImg = null;
+                }
+
+                // ----- 头像框（avatar-ring）样式选择 -----
+                const AVATAR_FRAMES = [
+                    { id: '',              name: '彩虹渐变', css: 'linear-gradient(135deg,#409eff,#b37feb,#ff85c0)' },
+                    { id: 'aurora',        name: '极光紫',   css: 'linear-gradient(135deg,#667eea,#764ba2)' },
+                    { id: 'sunset',        name: '落日橙',   css: 'linear-gradient(135deg,#ff8c42,#ff3d7f)' },
+                    { id: 'emerald',       name: '翡翠绿',   css: 'linear-gradient(135deg,#11998e,#38ef7d)' },
+                    { id: 'gold',          name: '金辉',     css: 'linear-gradient(135deg,#ffd700,#ff8c00)' },
+                    { id: 'iceblue',       name: '冰蓝',     css: 'linear-gradient(135deg,#00c6fb,#005bea)' },
+                    { id: 'midnight',      name: '暗夜',      css: 'linear-gradient(135deg,#232526,#434343)' },
+                    { id: 'sakura',        name: '樱花',     css: 'linear-gradient(135deg,#ff9a9e,#fad0c4)' },
+                    { id: 'plain-white',   name: '极简白',   css: '#ffffff' },
+                    { id: 'plain-dark',    name: '极简黑',   css: '#303133' }
+                ];
+                // ===== 默认圈框素材（SVG） =====
+                const DEFAULT_CIRCLE_FRAMES = [
+                    { id: 'cf_red_oval', name: '红椭圆', type: 'svg', base64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiB2aWV3Qm94PSIwIDAgMjAwIDEyMCI+PGVsbGlwc2UgY3g9IjEwMCIgY3k9IjYwIiByeD0iOTUiIHJ5PSI1NSIgc3Ryb2tlPSIjZTc0YzNjIiBzdHJva2Utd2lkdGg9IjMiIGZpbGw9Im5vbmUiLz48L3N2Zz4=' },
+                    { id: 'cf_blue_rect', name: '蓝圆角', type: 'svg', base64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiB2aWV3Qm94PSIwIDAgMjAwIDEyMCI+PHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjE4NCIgaGVpZ2h0PSIxMDQiIHJ4PSIxNCIgc3Ryb2tlPSIjNDA5ZWZmIiBzdHJva2Utd2lkdGg9IjMiIGZpbGw9Im5vbmUiLz48L3N2Zz4=' },
+                    { id: 'cf_green_round', name: '绿圆', type: 'svg', base64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiB2aWV3Qm94PSIwIDAgMjAwIDEyMCI+PHBhdGggZD0iTTIwIDYwIFEyMCAyMCAxMDAgMjAgUTE4MCAyMCAxODAgNjAgUTE4MCAxMDAgMTAwIDEwMCBRMjAgMTAwIDIwIDYwIiBzdHJva2U9IiMyN2FlNjAiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIvPjwvc3ZnPg==' },
+                    { id: 'cf_orange_dash', name: '橙虚线', type: 'svg', base64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiB2aWV3Qm94PSIwIDAgMjAwIDEyMCI+PHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjE4NCIgaGVpZ2h0PSIxMDQiIHJ4PSIyMCIgc3Ryb2tlPSIjZTZhMjNjIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1kYXNoYXJyYXk9IjggNiIgZmlsbD0ibm9uZSIvPjwvc3ZnPg==' },
+                    { id: 'cf_pink_oval', name: '粉椭圆', type: 'svg', base64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiB2aWV3Qm94PSIwIDAgMjAwIDEyMCI+PGVsbGlwc2UgY3g9IjEwMCIgY3k9IjYwIiByeD0iOTUiIHJ5PSI1NSIgc3Ryb2tlPSIjZmY4MGFiIiBzdHJva2Utd2lkdGg9IjMiIGZpbGw9Im5vbmUiLz48L3N2Zz4=' }
+                ];
+                // ===== 默认箭头素材（SVG，朝右） =====
+                const DEFAULT_ARROWS = [
+                    { id: 'arr_red_hand', name: '红手写', type: 'svg', base64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDgwIDQwIj48cGF0aCBkPSJNNSAyMCBRNDAgNSA3MCAyMCIgc3Ryb2tlPSIjZTc0YzNjIiBzdHJva2Utd2lkdGg9IjMiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik02MCAxMiBMNzIgMjAgTDYwIDI4IiBzdHJva2U9IiNlNzRjM2MiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+' },
+                    { id: 'arr_blue_simple', name: '蓝简约', type: 'svg', base64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDgwIDQwIj48bGluZSB4MT0iNSIgeTE9IjIwIiB4Mj0iNjgiIHkyPSIyMCIgc3Ryb2tlPSIjNDA5ZWZmIiBzdHJva2Utd2lkdGg9IjIuNSIvPjxwYXRoIGQ9Ik02MCAxMiBMNzIgMjAgTDYwIDI4IiBmaWxsPSIjNDA5ZWZmIi8+PC9zdmc+' },
+                    { id: 'arr_yellow_hl', name: '黄荧光', type: 'svg', base64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDgwIDQwIj48cGF0aCBkPSJNNSAyMiBRNDAgOCA2OCAyMCIgc3Ryb2tlPSIjZjFjNDBmIiBzdHJva2Utd2lkdGg9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC44Ii8+PHBhdGggZD0iTTU4IDEyIEw3MiAyMCBMNTggMjgiIGZpbGw9IiNmMWM0MGYiLz48L3N2Zz4=' },
+                    { id: 'arr_green_wave', name: '绿波浪', type: 'svg', base64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDgwIDQwIj48cGF0aCBkPSJNNSAyMCBRMjAgMTAgMzUgMjAgUTUwIDMwIDY1IDIwIiBzdHJva2U9IiMyN2FlNjAiIHN0cm9rZS13aWR0aD0iMi41IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48cGF0aCBkPSJNNTggMTIgTDcyIDIwIEw1OCAyOCIgZmlsbD0iIzI3YWU2MCIvPjwvc3ZnPg==' }
+                ];
+                function getAvatarFrameCss(frameId) {
+                    // 1. 系统预设
+                    const f = AVATAR_FRAMES.find(x => x.id === (frameId || ''));
+                    if (f) return f.css;
+                    // 2. 用户自定义（本地）
+                    const custom = (appState.userData && appState.userData.customAvatarFrames || []).find(x => x.id === frameId);
+                    if (custom) {
+                        if (custom.type === 'css') return custom.css;
+                        if (custom.type === 'png') return `url(${custom.base64}) center/cover no-repeat`;
+                        if (custom.type === 'svg') return `url("${custom.base64}") center/cover no-repeat`;
+                    }
+                    return AVATAR_FRAMES[0].css;
+                }
+                // 合并系统预设 + 用户自定义（供模板遍历）
+                function getAllAvatarFrames() {
+                    const presets = AVATAR_FRAMES.map(f => ({ ...f, type: 'css', preset: true }));
+                    const customs = (appState.userData && appState.userData.customAvatarFrames || []).map(f => ({ ...f, preset: false }));
+                    return [...presets, ...customs];
+                }
+                // 选中头像框：立即持久化
+                async function selectAvatarFrame(frameId) {
+                    if (!appState.userData.profile) return;
+                    appState.userData.profile.avatarFrame = frameId;
+                    try { await saveUserDataNow(); } catch (e) {}
+                }
+                function openFramePicker() { appState.framePickerVisible = true; }
+
+                // ===== 头像框本地上传 =====
+                function addCustomAvatarFrame(frame) {
+                    const id = 'cf_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+                    const newFrame = { id, ...frame };
+                    appState.userData.customAvatarFrames = [...(appState.userData.customAvatarFrames || []), newFrame];
+                    scheduleSaveUserData();
+                    return newFrame;
+                }
+                function deleteCustomAvatarFrame(id) {
+                    appState.userData.customAvatarFrames = (appState.userData.customAvatarFrames || []).filter(f => f.id !== id);
+                    // 如果正在用被删的框，回退到默认
+                    if (appState.userData.profile && appState.userData.profile.avatarFrame === id) {
+                        appState.userData.profile.avatarFrame = '';
+                    }
+                    scheduleSaveUserData();
+                }
+                // 上传头像框：支持 PNG / SVG / CSS 文本
+                function onAvatarFrameFileUpload(ev) {
+                    const file = ev.target.files && ev.target.files[0];
+                    if (!file) return;
+                    if (file.size > 512 * 1024) { showToast('文件不能超过 512KB', 'warning'); ev.target.value = ''; return; }
+                    const ext = (file.name.split('.').pop() || '').toLowerCase();
+                    const reader = new FileReader();
+                    if (ext === 'svg') {
+                        reader.onload = (e) => {
+                            const svgText = e.target.result;
+                            addCustomAvatarFrame({ name: file.name.replace(/\.[^.]+$/, ''), type: 'svg', base64: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText) });
+                            showToast('头像框已添加（本地）', 'success');
+                        };
+                        reader.readAsText(file);
+                    } else if (ext === 'png' || ext === 'jpg' || ext === 'jpeg' || ext === 'webp') {
+                        reader.onload = (e) => {
+                            addCustomAvatarFrame({ name: file.name.replace(/\.[^.]+$/, ''), type: 'png', base64: e.target.result });
+                            showToast('头像框已添加（本地）', 'success');
+                        };
+                        reader.readAsDataURL(file);
+                    } else if (ext === 'css' || ext === 'txt') {
+                        reader.onload = (e) => {
+                            const css = (e.target.result || '').trim();
+                            if (!css) return;
+                            addCustomAvatarFrame({ name: file.name.replace(/\.[^.]+$/, ''), type: 'css', css });
+                            showToast('头像框已添加（本地）', 'success');
+                        };
+                        reader.readAsText(file);
+                    } else {
+                        showToast('仅支持 PNG/SVG/CSS/TXT 格式', 'warning');
+                    }
                     ev.target.value = '';
+                }
+
+                // ===== 划线批注功能 =====
+                // 颜色枚举（模板与逻辑共用）
+                const ANNO_COLORS = [
+                    { key: 'none',   name: '无',  bg: 'transparent', border: '#c0c4cc' },
+                    { key: 'yellow', name: '黄',  bg: 'rgba(255, 235, 100, .45)', border: '#f1c40f' },
+                    { key: 'blue',   name: '蓝',  bg: 'rgba(160, 210, 255, .45)', border: '#409eff' },
+                    { key: 'green',  name: '绿',  bg: 'rgba(160, 230, 170, .45)', border: '#67c23a' },
+                    { key: 'pink',   name: '粉',  bg: 'rgba(255, 175, 200, .45)', border: '#ff85c0' }
+                ];
+                // 辅助：根据 color 字段返回 CSS 背景色（预设 key 或自定义 '#hex'）
+                function getAnnoBgColor(c) {
+                    if (!c || c === 'none') return '';
+                    // 预设 key
+                    const preset = ANNO_COLORS.find(x => x.key === c);
+                    if (preset) return preset.bg;
+                    // 自定义 hex，转半透明背景
+                    if (c.startsWith('#') && c.length >= 7) {
+                        // 取前 6 位颜色，加 35% 透明度
+                        const r = parseInt(c.slice(1,3), 16);
+                        const g = parseInt(c.slice(3,5), 16);
+                        const b = parseInt(c.slice(5,7), 16);
+                        return `rgba(${r}, ${g}, ${b}, 0.35)`;
+                    }
+                    return '';
+                }
+                window.getAnnoBgColor = getAnnoBgColor;
+                // 6 种下划线样式
+                const ANNO_LINE_STYLES = [
+                    { key: 'none',             name: '无' },
+                    { key: 'underline',        name: '下划线' },
+                    { key: 'double-underline', name: '双下线' },
+                    { key: 'centerline',       name: '删除线' },
+                    { key: 'dotted',           name: '点线' },
+                    { key: 'wavy',             name: '波浪线' },
+                    { key: 'double-dashed',    name: '双虚线' }
+                ];
+                // 字号预设（仿 WPS）
+                const ANNO_FONT_SIZES = [
+                    { label: '初号', px: 42 }, { label: '小初', px: 36 },
+                    { label: '一号', px: 26 }, { label: '小一', px: 24 },
+                    { label: '二号', px: 22 }, { label: '小二', px: 18 },
+                    { label: '三号', px: 16 }, { label: '小三', px: 15 },
+                    { label: '四号', px: 14 }, { label: '小四', px: 12 },
+                    { label: '五号', px: 10.5 }, { label: '小五', px: 9 }
+                ];
+                // 系统预设字体
+                const ANNO_SYSTEM_FONTS = [
+                    { label: '默认字体', value: '' },
+                    { label: '楷体', value: "'KaiTi','楷体',serif" },
+                    { label: '宋体', value: "'SimSun','宋体',serif" },
+                    { label: '微软雅黑', value: "'Microsoft YaHei','微软雅黑',sans-serif" },
+                    { label: '黑体', value: "'SimHei','黑体',sans-serif" },
+                    { label: '华文行楷', value: "'STXingkai','华文行楷',cursive" },
+                    { label: '华文琥珀', value: "'STHupo','华文琥珀',cursive" },
+                    { label: 'Comic Sans', value: "'Comic Sans MS',cursive" },
+                    { label: '等宽', value: "'Courier New',monospace" },
+                    { label: '手写体', value: "'Segoe Script',cursive" }
+                ];
+                // 预设 emoji 贴纸（常用表情）
+                const ANNO_DEFAULT_EMOJIS = [
+                    '⭐', '❤️', '💯', '👍', '👀', '😂', '😭', '🤔',
+                    '🔥', '✨', '💡', '📌', '❗', '❓', '🎉', '💪',
+                    '🌟', '💖', '🙌', '💬'
+                ];
+                // 计算属性：从 userData.stickers 筛 emoji / image 类型（模板里不能写箭头函数！）
+                const annoEmojiStickers = computed(() =>
+                    (appState.userData.stickers || []).filter(s => s.type === 'emoji')
+                );
+                const annoImageStickers = computed(() =>
+                    (appState.userData.stickers || []).filter(s => s.type === 'image')
+                );
+                // 编辑弹窗「划线内容」实时预览样式（与实际渲染 renderAnnotatedContent 保持一致）
+                const annoPreviewStyle = computed(() => {
+                    const ed = appState.annoEdit;
+                    const bgColor = getAnnoBgColor(ed.color);
+                    const lineColor = ed.lineColor || '#303133';
+                    const frame = ed.circleFrameId ? (appState.userData.circleFrames || []).find(f => f.id === ed.circleFrameId) : null;
+                    const style = {
+                        textDecorationColor: lineColor,
+                        '--anno-lc': lineColor
+                    };
+                    if (ed.borderStyle === 'highlight' && bgColor) style.backgroundColor = bgColor;
+                    if (ed.bold) style.fontWeight = '700';
+                    if (ed.italic) style.fontStyle = 'italic';
+                    if (ed.fontFamily) style.fontFamily = ed.fontFamily;
+                    if (ed.fontSize) style.fontSize = ed.fontSize + 'px';
+                    if (ed.borderStyle === 'circle' && frame) {
+                        style.backgroundImage = 'url(' + frame.base64 + ')';
+                        style.backgroundSize = '100% 100%';
+                        style.backgroundRepeat = 'no-repeat';
+                        style.backgroundPosition = 'center';
+                        style.padding = '6px 14px';
+                    }
+                    return style;
+                });
+                // 圈注箭头组合预览几何（框 + 箭头 + 批注气泡的相对位置）
+                const annoArrowPreview = computed(() => {
+                    const ed = appState.annoEdit;
+                    const dir = ed.arrowDir || 'right';
+                    let dx, dy;
+                    if (dir === 'right') { dx = 1; dy = 0; }
+                    else if (dir === 'left') { dx = -1; dy = 0; }
+                    else if (dir === 'down') { dx = 0; dy = 1; }
+                    else { dx = 0; dy = -1; }
+                    const userAng = (ed.noteOffset && typeof ed.noteOffset.x === 'number') ? ed.noteOffset.x : 0;
+                    if (userAng) {
+                        const rad = userAng * Math.PI / 180;
+                        const c = Math.cos(rad), s = Math.sin(rad);
+                        const nx = dx * c - dy * s;
+                        const ny = dx * s + dy * c;
+                        dx = nx; dy = ny;
+                    }
+                    const dlen = Math.sqrt(dx * dx + dy * dy) || 1;
+                    dx /= dlen; dy /= dlen;
+                    // 根据文字长度估算框宽（中文14px/字，英文8px/字），保证文字不被裁切
+                    const txt = ed.text || '文字';
+                    let estW = 0;
+                    for (const ch of txt) { estW += /[\u4e00-\u9fa5]/.test(ch) ? 14 : 8; }
+                    const rx = Math.max(40, estW / 2 + 10);
+                    const ry = 22;
+                    // 框中心位置：根据方向留出箭头+气泡空间
+                    let cx = 200, cy = 80;
+                    if (dir === 'right') { cx = rx + 24; cy = 80; }
+                    else if (dir === 'left') { cx = 420 - rx; cy = 80; }
+                    else if (dir === 'down') { cx = 200; cy = ry + 12; }
+                    else { cx = 200; cy = 148 - ry; }   // up
+                    const t = 1 / Math.sqrt((dx / rx) * (dx / rx) + (dy / ry) * (dy / ry));
+                    const fromX = cx + dx * t;
+                    const fromY = cy + dy * t;
+                    const ARROW_LEN = 67;
+                    const toX = fromX + dx * ARROW_LEN;
+                    const toY = fromY + dy * ARROW_LEN;
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                    // 气泡偏移：根据实际方向（含角度微调）决定气泡在箭头尖的哪一侧
+                    let noteTransform;
+                    if (Math.abs(dx) >= Math.abs(dy)) {
+                        noteTransform = dx >= 0 ? 'translate(6px, -50%)' : 'translate(calc(-100% - 6px), -50%)';
+                    } else {
+                        noteTransform = dy >= 0 ? 'translate(-50%, 6px)' : 'translate(-50%, calc(-100% - 6px))';
+                    }
+                    const frame = ed.circleFrameId ? (appState.userData.circleFrames || []).find(f => f.id === ed.circleFrameId) : null;
+                    const arrow = ed.arrowId ? (appState.userData.arrows || []).find(a => a.id === ed.arrowId) : null;
+                    return { cx, cy, rx, ry, fromX, fromY, toX, toY, angle, dir, noteTransform,
+                             frameBase64: frame ? frame.base64 : '',
+                             arrowBase64: arrow ? arrow.base64 : '' };
+                });
+                function annoColorMeta(key) {
+                    return ANNO_COLORS.find(c => c.key === key) || ANNO_COLORS[0];
+                }
+                // 生成批注 id
+                function genAnnoId() {
+                    return 'a_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+                }
+                // 取某条微博的所有批注（按 start 升序）
+                function annosOf(weiboId) {
+                    const items = appState.userData.annotations.items || {};
+                    const arr = items[weiboId] || [];
+                    return arr.slice().sort((a, b) => a.start - b.start);
+                }
+                // 批注数量（响应式触发器：返回数字即可，模板里直接读 annosOf(weibo.weiboId).length 也可）
+                function annoCountOf(weiboId) {
+                    return annosOf(weiboId).length;
+                }
+                // 渲染带批注高亮的 HTML：把 weibo.content 按 anno.start/end 切段
+                // 失配（content.substr(start, len) !== anno.text）的高亮会用灰色虚线标注
+                function renderAnnotatedContent(weibo) {
+                    const content = weibo.content || '';
+                    const annos = annosOf(weibo.weiboId);
+                    if (!annos.length) return escapeHtml(content);
+                    // 构造 [start, end, anno] 段，过滤掉越界
+                    const segs = [];
+                    for (const a of annos) {
+                        const s = Math.max(0, Math.min(a.start, content.length));
+                        const e = Math.max(s, Math.min(a.end, content.length));
+                        if (e <= s) continue;
+                        segs.push({ start: s, end: e, anno: a });
+                    }
+                    // 按 start 排序，解决重叠：后插入的会被前面覆盖（简单冲突解决：先来的赢）
+                    segs.sort((x, y) => x.start - y.start || y.end - x.end);
+                    // 合并重叠段：保留先到的 anno，截掉后续重叠部分
+                    const finalSegs = [];
+                    let cursor = 0;
+                    for (const seg of segs) {
+                        if (seg.start < cursor) {
+                            // 与上一段重叠：截掉前面
+                            if (seg.end <= cursor) continue;
+                            seg.start = cursor;
+                        }
+                        finalSegs.push(seg);
+                        cursor = seg.end;
+                    }
+                    // 拼接 HTML（注意：这里只能输出纯文本 + highlight span，不能有任何嵌套的 popover/tooltip 文本节点！
+                    // 否则 TreeWalker 遍历文本节点时会把它们也算进去，导致 offset 错乱）
+                    let html = '';
+                    let pos = 0;
+                    for (const seg of finalSegs) {
+                        if (seg.start > pos) html += escapeHtml(content.slice(pos, seg.start));
+                        const textInContent = content.slice(seg.start, seg.end);
+                        const matched = textInContent === seg.anno.text;
+                        const lineStyle = seg.anno.lineStyle || 'underline';  // 兼容旧数据
+                        const lineColor = seg.anno.lineColor || '#303133';    // 兼容旧数据
+                        const borderStyle = seg.anno.borderStyle || 'highlight';  // 兼容旧数据
+                        const circleFrameId = seg.anno.circleFrameId || '';
+                        const stickerId = seg.anno.stickerId || '';
+                        const bgColor = getAnnoBgColor(seg.anno.color);
+                        const bold = !!seg.anno.bold;
+                        const italic = !!seg.anno.italic;
+                        const fontFamily = seg.anno.fontFamily || '';
+                        // 圈注模式：用素材图做背景
+                        const frame = circleFrameId ? (appState.userData.circleFrames || []).find(f => f.id === circleFrameId) : null;
+                        const cls = (matched ? 'anno-highlight' : 'anno-highlight anno-mismatch')
+                                  + ' anno-line-' + lineStyle
+                                  + ' anno-border-' + borderStyle
+                                  + (borderStyle === 'circle' && frame ? ' has-frame' : '');
+                        // inline style
+                        const styleParts = [
+                            borderStyle === 'highlight' && bgColor ? 'background-color:' + bgColor : '',
+                            'text-decoration-color:' + lineColor,
+                            '--anno-lc:' + lineColor,
+                            bold ? 'font-weight:700' : '',
+                            italic ? 'font-style:italic' : '',
+                            fontFamily ? 'font-family:' + fontFamily : '',
+                            seg.anno.fontSize ? 'font-size:' + seg.anno.fontSize + 'px' : '',
+                            (borderStyle === 'circle' && frame) ? 'background-image:url(' + frame.base64 + ');background-size:100% 100%;background-repeat:no-repeat;background-position:center' : ''
+                        ].filter(Boolean);
+                        const style = styleParts.join(';');
+                        html += '<span class="' + cls + '" style="' + escapeHtml(style) + '" '
+                              + 'data-anno-id="' + seg.anno.id + '" '
+                              + 'data-weibo-id="' + weibo.weiboId + '" '
+                              + 'data-sticker-id="' + stickerId + '" '
+                              + 'data-created-at="' + escapeHtml(seg.anno.createdAt || '') + '" '
+                              + 'data-matched="' + (matched ? '1' : '0') + '">'
+                              + escapeHtml(textInContent)
+                              + '</span>';
+                        pos = seg.end;
+                    }
+                    if (pos < content.length) html += escapeHtml(content.slice(pos));
+                    return html;
+                }
+                // HTML 转义（防止用户原文包含 < > & 等）
+                function escapeHtml(s) {
+                    return String(s == null ? '' : s)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;');
+                }
+                // 切换某条微博的批注模式
+                function toggleAnnoMode(weiboId) {
+                    if (appState.activeAnnoWeiboId === weiboId) {
+                        appState.activeAnnoWeiboId = null;
+                        appState.annoFloatBtn.visible = false;
+                    } else {
+                        appState.activeAnnoWeiboId = weiboId;
+                    }
+                }
+                // 全局事件委托版本：不需要 ev.currentTarget，从 target 找 container
+                function globalAnnoAreaMouseup(ev) {
+                    const container = ev.target && ev.target.closest ? ev.target.closest('.anno-render-area') : null;
+                    if (!container) { console.log('[anno-global] no container'); return; }
+                    // 必须是当前激活的那条微博
+                    const wId = container.getAttribute('data-weibo-id');
+                    if (!wId || wId !== appState.activeAnnoWeiboId) {
+                        console.log('[anno-global] mismatch: container=', wId, 'active=', appState.activeAnnoWeiboId);
+                        return;
+                    }
+                    console.log('[anno-global] hit container, waiting for selection...');
+                    setTimeout(() => {
+                        const sel = window.getSelection ? window.getSelection() : null;
+                        console.log('[anno-global] sel=', sel ? ('exist collapsed=' + sel.isCollapsed + ' rangeCount=' + sel.rangeCount) : 'null');
+                        if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+                            appState.annoFloatBtn.visible = false;
+                            return;
+                        }
+                        const range = sel.getRangeAt(0);
+                        if (range.collapsed) { appState.annoFloatBtn.visible = false; return; }
+                        const scIn = container.contains(range.startContainer), ecIn = container.contains(range.endContainer);
+                        console.log('[anno-global] range in container: startIn=', scIn, 'endIn=', ecIn);
+                        if (!scIn || !ecIn) {
+                            appState.annoFloatBtn.visible = false;
+                            return;
+                        }
+                        const offsets = getRangeOffsetsInContainer(range, container);
+                        console.log('[anno-global] offsets=', offsets);
+                        if (offsets.start < 0 || offsets.end <= offsets.start) {
+                            appState.annoFloatBtn.visible = false;
+                            return;
+                        }
+                        // getBoundingClientRect 跨元素可能返回空 rect，fallback
+                        let rect = range.getBoundingClientRect();
+                        if (!rect || (rect.width === 0 && rect.height === 0)) {
+                            const crs = range.getClientRects();
+                            if (crs && crs.length > 0) rect = crs[0];
+                            else rect = container.getBoundingClientRect();
+                        }
+                        console.log('[anno-global] rect=', Math.round(rect.left), Math.round(rect.top), 'w=', Math.round(rect.width), 'h=', Math.round(rect.height));
+                        const scrollY = window.scrollY || window.pageYOffset;
+                        const scrollX = window.scrollX || window.pageXOffset;
+                        appState.annoFloatBtn.weiboId = wId;
+                        appState.annoFloatBtn.selStart = offsets.start;
+                        appState.annoFloatBtn.selEnd = offsets.end;
+                        appState.annoFloatBtn.selText = range.toString();
+                        appState.annoFloatBtn.x = rect.left + scrollX + rect.width / 2;
+                        appState.annoFloatBtn.y = rect.top + scrollY - 8;
+                        appState.annoFloatBtn.visible = true;
+                        console.log('[anno-global] float btn visible=true at (', appState.annoFloatBtn.x.toFixed(0), ',', appState.annoFloatBtn.y.toFixed(0), ')');
+                    }, 0);
+                }
+                // 只读渲染区 mouseup：检测选区，定位浮动按钮
+                function onAnnoAreaMouseup(ev, weibo) {
+                    // 双击后跳过（dblclick 已经处理了编辑 Dialog）
+                    if (window.__annoJustDblclicked) return;
+                    // 延迟一帧，让 selection 完成
+                    setTimeout(() => {
+                        if (window.__annoJustDblclicked) return;  // 双重保险
+                        const sel = window.getSelection ? window.getSelection() : null;
+                        console.log('[anno] mouseup fired, sel=', sel ? 'exist' : 'null', sel ? 'collapsed=' + sel.isCollapsed : '', sel ? 'rangeCount=' + sel.rangeCount : '');
+                        if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+                            appState.annoFloatBtn.visible = false;
+                            return;
+                        }
+                        const range = sel.getRangeAt(0);
+                        if (range.collapsed) { appState.annoFloatBtn.visible = false; return; }
+                        // 必须在渲染区内
+                        const container = ev.currentTarget;
+                        const scIn = container.contains(range.startContainer), ecIn = container.contains(range.endContainer);
+                        console.log('[anno] range container check: startIn=', scIn, 'endIn=', ecIn, 'startContainer.nodeType=', range.startContainer.nodeType, range.startContainer.nodeType === 3 ? '(TEXT)' : range.startContainer);
+                        if (!scIn || !ecIn) {
+                            appState.annoFloatBtn.visible = false;
+                            return;
+                        }
+                        const offsets = getRangeOffsetsInContainer(range, container);
+                        console.log('[anno] offsets=', offsets);
+                        if (offsets.start < 0 || offsets.end <= offsets.start) {
+                            appState.annoFloatBtn.visible = false;
+                            return;
+                        }
+                        // getBoundingClientRect 跨元素可能返回空 rect，fallback 取首个 clientRect 或 container rect
+                        let rect = range.getBoundingClientRect();
+                        if (!rect || (rect.width === 0 && rect.height === 0)) {
+                            const crs = range.getClientRects();
+                            if (crs && crs.length > 0) rect = crs[0];
+                            else rect = container.getBoundingClientRect();
+                        }
+                        console.log('[anno] rect=', rect.left, rect.top, 'w=', rect.width, 'h=', rect.height);
+                        const scrollY = window.scrollY || window.pageYOffset;
+                        const scrollX = window.scrollX || window.pageXOffset;
+                        appState.annoFloatBtn.weiboId = weibo.weiboId;
+                        appState.annoFloatBtn.selStart = offsets.start;
+                        appState.annoFloatBtn.selEnd = offsets.end;
+                        appState.annoFloatBtn.selText = range.toString();
+                        appState.annoFloatBtn.x = rect.left + scrollX + rect.width / 2;
+                        appState.annoFloatBtn.y = rect.top + scrollY - 8;
+                        appState.annoFloatBtn.visible = true;
+                        console.log('[anno] float btn set visible=true at (', appState.annoFloatBtn.x, ',', appState.annoFloatBtn.y, ')');
+                    }, 0);
+                }
+                // 用 TreeWalker 遍历 container 内所有文本节点，定位 range 的起止偏移
+                function getRangeOffsetsInContainer(range, container) {
+                    let startOffset = -1, endOffset = -1;
+                    let acc = 0;
+                    // 关键：acceptNode 过滤器，跳过高亮 span 内部的任何子节点（tooltip/arrow 等）
+                    // 高亮 span 自身的文本节点应该被遍历，但如果将来加了嵌套元素（如 tooltip），
+                    // 那些元素内的文本节点必须跳过，否则偏移量会被撑大导致第二条批注位置错乱
+                    const filter = {
+                        acceptNode(node) {
+                            // node 是 Text 节点，检查其父元素是否在 .anno-highlight 内部且不是 .anno-highlight 自身的直接文本
+                            // 简单策略：跳过带有 data-anno-id 的 span 内部子节点（除了 Text 节点本身的父 span）
+                            let parent = node.parentNode;
+                            // 如果父元素是 .anno-highlight，允许（因为 highlight 的直接文本就是用户原文）
+                            if (parent && parent.classList && parent.classList.contains('anno-highlight')) {
+                                return NodeFilter.FILTER_ACCEPT;
+                            }
+                            // 如果父元素或祖父元素有 .anno-popover / .anno-tooltip / .anno-highlight 以外的 anno 子元素，拒绝
+                            // 兜底：如果 node 不在 container 的 user 文本层，跳过
+                            let el = parent;
+                            while (el && el !== container) {
+                                if (el.classList) {
+                                    if (el.classList.contains('anno-popover') || el.classList.contains('anno-tooltip') || el.classList.contains('anno-popover-arrow') || el.classList.contains('anno-popover-text') || el.classList.contains('anno-popover-meta')) {
+                                        return NodeFilter.FILTER_REJECT;
+                                    }
+                                }
+                                el = el.parentNode;
+                            }
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                    };
+                    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, filter);
+                    let node;
+                    while ((node = walker.nextNode())) {
+                        const len = node.nodeValue.length;
+                        if (node === range.startContainer) startOffset = acc + range.startOffset;
+                        if (node === range.endContainer)   endOffset   = acc + range.endOffset;
+                        acc += len;
+                    }
+                    // 容错：如果起止反了，交换
+                    if (startOffset >= 0 && endOffset >= 0 && endOffset < startOffset) {
+                        const t = startOffset; startOffset = endOffset; endOffset = t;
+                    }
+                    return { start: startOffset, end: endOffset };
+                }
+                // 点击「➕ 批注」浮动按钮：打开新建批注 Dialog
+                function openAnnoEditorFromFloat() {
+                    if (!appState.annoFloatBtn.weiboId) return;
+                    const fb = appState.annoFloatBtn;
+                    appState.annoEdit.isNew = true;
+                    appState.annoEdit.weiboId = fb.weiboId;
+                    appState.annoEdit.annoId = '';
+                    appState.annoEdit.start = fb.selStart;
+                    appState.annoEdit.end = fb.selEnd;
+                    appState.annoEdit.color = 'yellow';
+                    appState.annoEdit.lineStyle = 'underline';
+                    appState.annoEdit.lineColor = '#303133';
+                    appState.annoEdit.borderStyle = 'highlight';
+                    appState.annoEdit.bold = false;
+                    appState.annoEdit.italic = false;
+                    appState.annoEdit.fontFamily = '';
+                    appState.annoEdit.fontSize = 14;
+                    appState.annoEdit.circleFrameId = '';
+                    appState.annoEdit.arrowId = '';
+                    appState.annoEdit.arrowDir = 'right';
+                    appState.annoEdit.noteOffset = { x: 0, y: 0 };
+                    appState.annoEdit.stickerId = '';
+                    appState.annoEdit.text = fb.selText;
+                    appState.annoEdit.note = '';
+                    appState.annoEdit.createdAt = nowStr();
+                    appState.annoEdit._stickerPanelOpen = false;
+                    appState.annoEdit.visible = true;
+                    appState.annoFloatBtn.visible = false;
+                    if (window.getSelection) window.getSelection().removeAllRanges();
+                }
+                // 点击高亮 span：打开编辑 Dialog（预填批注）—— 事件代理版本
+                function onAnnoAreaClick(ev, weibo) {
+                    // 找到最近的 .anno-highlight
+                    const target = ev.target && ev.target.closest ? ev.target.closest('.anno-highlight') : null;
+                    if (!target) return;
+                    const annoId = target.getAttribute('data-anno-id');
+                    const weiboId = target.getAttribute('data-weibo-id') || weibo.weiboId;
+                    if (!annoId) return;
+                    ev.stopPropagation();
+                    const arr = (appState.userData.annotations.items[weiboId] || []).filter(a => a.id === annoId);
+                    if (!arr.length) return;
+                    const a = arr[0];
+                    appState.annoEdit.isNew = false;
+                    appState.annoEdit.weiboId = weiboId;
+                    appState.annoEdit.annoId = annoId;
+                    appState.annoEdit.start = a.start;
+                    appState.annoEdit.end = a.end;
+                    appState.annoEdit.color = a.color;
+                    appState.annoEdit.lineStyle = a.lineStyle || 'underline';
+                    appState.annoEdit.lineColor = a.lineColor || '#303133';
+                    appState.annoEdit.borderStyle = a.borderStyle || 'highlight';
+                    appState.annoEdit.bold = !!a.bold;
+                    appState.annoEdit.italic = !!a.italic;
+                    appState.annoEdit.fontFamily = a.fontFamily || '';
+                    appState.annoEdit.fontSize = a.fontSize || 14;
+                    appState.annoEdit.circleFrameId = a.circleFrameId || '';
+                    appState.annoEdit.arrowId = a.arrowId || '';
+                    appState.annoEdit.arrowDir = a.arrowDir || 'right';
+                    appState.annoEdit.noteOffset = a.noteOffset || { x: 0, y: 0 };
+                    appState.annoEdit.stickerId = a.stickerId || '';
+                    appState.annoEdit.text = a.text;
+                    appState.annoEdit.note = a.note;
+                    appState.annoEdit.createdAt = a.createdAt;
+                    appState.annoEdit._stickerPanelOpen = false;
+                    appState.annoEdit.visible = true;
+                    appState.annoFloatBtn.visible = false;
+                    if (window.getSelection) window.getSelection().removeAllRanges();
+                }
+                // 旧接口保留：直接被模板调用时（理论不会触发，因为 v-html 内无指令）
+                function onAnnoSpanClick(ev, weiboId, annoId) {
+                    ev.stopPropagation();
+                    const arr = (appState.userData.annotations.items[weiboId] || []).filter(a => a.id === annoId);
+                    if (!arr.length) return;
+                    const a = arr[0];
+                    appState.annoEdit.isNew = false;
+                    appState.annoEdit.weiboId = weiboId;
+                    appState.annoEdit.annoId = annoId;
+                    appState.annoEdit.start = a.start;
+                    appState.annoEdit.end = a.end;
+                    appState.annoEdit.color = a.color;
+                    appState.annoEdit.text = a.text;
+                    appState.annoEdit.note = a.note;
+                    appState.annoEdit.createdAt = a.createdAt;
+                    appState.annoEdit.visible = true;
+                }
+                // 保存（新增或更新）批注
+                function saveAnnoEdit() {
+                    const ed = appState.annoEdit;
+                    if (!ed.weiboId) return;
+                    const note = ed.note || '';
+                    // 不再强制必填文字批注——用户可以只用贴纸
+                    const items = appState.userData.annotations.items;
+                    if (!items[ed.weiboId]) items[ed.weiboId] = [];
+                    if (ed.isNew) {
+                        items[ed.weiboId].push({
+                            id: genAnnoId(),
+                            start: ed.start,
+                            end: ed.end,
+                            color: ed.color,
+                            lineStyle: ed.lineStyle || 'underline',
+                            lineColor: ed.lineColor || '#303133',
+                            borderStyle: ed.borderStyle || 'highlight',
+                            bold: !!ed.bold,
+                            italic: !!ed.italic,
+                            fontFamily: ed.fontFamily || '',
+                            fontSize: ed.fontSize || 14,
+                            circleFrameId: ed.circleFrameId || '',
+                            arrowId: ed.arrowId || '',
+                            arrowDir: ed.arrowDir || 'right',
+                            noteOffset: ed.noteOffset || { x: 0, y: 0 },
+                            stickerId: ed.stickerId || '',
+                            text: ed.text,
+                            note: note,
+                            createdAt: nowStr()
+                        });
+                    } else {
+                        const arr = items[ed.weiboId];
+                        const idx = arr.findIndex(a => a.id === ed.annoId);
+                        if (idx >= 0) {
+                            arr[idx].color = ed.color;
+                            arr[idx].lineStyle = ed.lineStyle || 'underline';
+                            arr[idx].lineColor = ed.lineColor || '#303133';
+                            arr[idx].borderStyle = ed.borderStyle || 'highlight';
+                            arr[idx].bold = !!ed.bold;
+                            arr[idx].italic = !!ed.italic;
+                            arr[idx].fontFamily = ed.fontFamily || '';
+                            arr[idx].fontSize = ed.fontSize || 14;
+                            arr[idx].circleFrameId = ed.circleFrameId || '';
+                            arr[idx].arrowId = ed.arrowId || '';
+                            arr[idx].arrowDir = ed.arrowDir || 'right';
+                            arr[idx].noteOffset = ed.noteOffset || { x: 0, y: 0 };
+                            arr[idx].stickerId = ed.stickerId || '';
+                            arr[idx].note = note;
+                            // 不更新 start/end/text，原批注定位不变（如需改选请删后重建）
+                        }
+                    }
+                    ed.visible = false;
+                    scheduleSaveUserData();
+                }
+                // 删除批注
+                function deleteAnnoEdit() {
+                    const ed = appState.annoEdit;
+                    if (!ed.weiboId || !ed.annoId) { ed.visible = false; return; }
+                    const arr = (appState.userData.annotations.items[ed.weiboId] || []).filter(a => a.id !== ed.annoId);
+                    appState.userData.annotations.items[ed.weiboId] = arr;
+                    ed.visible = false;
+                    scheduleSaveUserData();
+                }
+                // 清空某条微博的所有批注
+                function clearAllAnnos(weiboId) {
+                    if (!weiboId) return;
+                    if (!window.confirm) { appState.userData.annotations.items[weiboId] = []; scheduleSaveUserData(); return; }
+                    appState.userData.annotations.items[weiboId] = [];
+                    scheduleSaveUserData();
+                    showToast('已清空该微博的所有批注', 'success');
+                }
+
+                // ===== 贴纸相关工具函数 =====
+                function getStickerById(id) {
+                    if (!id) return null;
+                    return (appState.userData.stickers || []).find(s => s.id === id) || null;
+                }
+                function genStickerId() {
+                    return 's_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+                }
+                function addSticker(type, content, name) {
+                    const s = { id: genStickerId(), type, content, name: name || '' };
+                    // 用展开赋值保证 computed 响应式更新（push 在某些情况下不触发）
+                    appState.userData.stickers = [...(appState.userData.stickers || []), s];
+                    scheduleSaveUserData();
+                    return s;
+                }
+                function removeSticker(id) {
+                    appState.userData.stickers = appState.userData.stickers.filter(s => s.id !== id);
+                    scheduleSaveUserData();
+                }
+                // 删除贴纸 + 如果当前选中的就是这个，清掉 stickerId
+                function deleteStickerAndUpdate(id) {
+                    removeSticker(id);
+                    if (appState.annoEdit.stickerId === id) appState.annoEdit.stickerId = '';
+                }
+                // 从 emojiCategories 分类里删除一个 emoji
+                function deleteEmojiFromCategory(catName, emoji) {
+                    if (appState.emojiCategories && appState.emojiCategories[catName]) {
+                        appState.emojiCategories[catName] = appState.emojiCategories[catName].filter(e => e !== emoji);
+                    }
+                }
+
+                // ===== 圈框素材库 =====
+                function genMaterialId(prefix) {
+                    return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+                }
+                function addCircleFrame(name, base64) {
+                    const f = { id: genMaterialId('cf'), name, type: 'png', base64 };
+                    appState.userData.circleFrames = [...(appState.userData.circleFrames || []), f];
+                    scheduleSaveUserData();
+                    return f;
+                }
+                function removeCircleFrame(id) {
+                    appState.userData.circleFrames = (appState.userData.circleFrames || []).filter(f => f.id !== id);
+                    if (appState.annoEdit.circleFrameId === id) appState.annoEdit.circleFrameId = '';
+                    scheduleSaveUserData();
+                }
+                function onCircleFrameUpload(ev) {
+                    const file = ev.target.files && ev.target.files[0];
+                    if (!file) return;
+                    if (file.size > 512 * 1024) { showToast('图片不能超过 512KB', 'warning'); ev.target.value = ''; return; }
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const f = addCircleFrame(file.name.replace(/\.[^.]+$/, ''), e.target.result);
+                        appState.annoEdit.circleFrameId = f.id;
+                        showToast('圈框已添加', 'success');
+                    };
+                    reader.readAsDataURL(file);
+                    ev.target.value = '';
+                }
+                // ===== 箭头素材库 =====
+                function addArrow(name, base64) {
+                    const a = { id: genMaterialId('ar'), name, type: 'png', base64 };
+                    appState.userData.arrows = [...(appState.userData.arrows || []), a];
+                    scheduleSaveUserData();
+                    return a;
+                }
+                function removeArrow(id) {
+                    appState.userData.arrows = (appState.userData.arrows || []).filter(a => a.id !== id);
+                    if (appState.annoEdit.arrowId === id) appState.annoEdit.arrowId = '';
+                    scheduleSaveUserData();
+                }
+                function onArrowUpload(ev) {
+                    const file = ev.target.files && ev.target.files[0];
+                    if (!file) return;
+                    if (file.size > 512 * 1024) { showToast('图片不能超过 512KB', 'warning'); ev.target.value = ''; return; }
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const a = addArrow(file.name.replace(/\.[^.]+$/, ''), e.target.result);
+                        appState.annoEdit.arrowId = a.id;
+                        showToast('箭头已添加', 'success');
+                    };
+                    reader.readAsDataURL(file);
+                    ev.target.value = '';
+                }
+                // 上传字体：用 FontFace API 注册 + base64 持久化
+                function onFontUpload(ev) {
+                    const file = ev.target.files && ev.target.files[0];
+                    if (!file) return;
+                    if (file.size > 5 * 1024 * 1024) { showToast('字体文件不能超过 5MB', 'warning'); ev.target.value = ''; return; }
+                    const id = 'uf_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+                    const family = 'userfont_' + id;
+                    const name = file.name.replace(/\.[^.]+$/, '');
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const buf = e.target.result;
+                            const face = new FontFace(family, buf);
+                            await face.load();
+                            document.fonts.add(face);
+                            const b64 = await new Promise((resolve, reject) => {
+                                const r2 = new FileReader();
+                                r2.onload = () => resolve(r2.result);
+                                r2.onerror = reject;
+                                r2.readAsDataURL(file);
+                            });
+                            appState.userData.userFonts = [...(appState.userData.userFonts || []), { id, name, family, base64: b64 }];
+                            appState.annoEdit.fontFamily = "'" + family + "',sans-serif";
+                            scheduleSaveUserData();
+                            showToast('字体已加载：' + name, 'success');
+                        } catch (err) {
+                            showToast('字体加载失败：' + (err.message || err), 'error');
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                    ev.target.value = '';
+                }
+                // 启动时恢复已上传字体到 document.fonts
+                function restoreUserFonts() {
+                    const fonts = appState.userData.userFonts || [];
+                    fonts.forEach(f => {
+                        try {
+                            const face = new FontFace(f.family, `url(${f.base64})`);
+                            face.load().then(() => document.fonts.add(face)).catch(() => {});
+                        } catch (e) {}
+                    });
+                }
+                // 构造用户字体的 CSS font-family 值（避免模板里写反引号）
+                function getUserFontValue(f) { return "'" + f.family + "',sans-serif"; }
+                // 点预设 emoji：查找已有的 sticker 或创建新的，然后选中
+                function selectOrCreateSticker(type, content) {
+                    const existing = (appState.userData.stickers || []).find(s => s.type === type && s.content === content);
+                    if (existing) {
+                        appState.annoEdit.stickerId = existing.id;
+                    } else {
+                        const s = addSticker(type, content);
+                        appState.annoEdit.stickerId = s.id;
+                    }
+                }
+                // 选中贴纸 + 自动关闭面板（Popover 模式）
+                function selectStickerAndClose(type, content, existingId) {
+                    if (existingId === 'NONE') {
+                        appState.annoEdit.stickerId = '';
+                        appState.annoEdit._stickerPanelOpen = false;
+                        return;
+                    }
+                    if (existingId) {
+                        appState.annoEdit.stickerId = existingId;
+                    } else {
+                        selectOrCreateSticker(type, content);
+                    }
+                    appState.annoEdit._stickerPanelOpen = false;
+                }
+                // 上传图片贴纸 —— 不关 Popover，让用户看到效果
+                function triggerStickerUpload() {
+                    const el = document.getElementById('annoStickerFileInput');
+                    if (el && el.click) {
+                        el.click();
+                    } else {
+                        // 兜底：直接创建临时 input
+                        const tmp = document.createElement('input');
+                        tmp.type = 'file';
+                        tmp.accept = 'image/*';
+                        tmp.onchange = (e) => onStickerImageUploadAndClose(e);
+                        tmp.click();
+                    }
+                }
+                function onStickerImageUploadAndClose(ev) {
+                    const file = ev.target.files && ev.target.files[0];
+                    if (!file) return;
+                    if (file.size > 512 * 1024) { showToast('图片不能超过 512KB', 'warning'); ev.target.value = ''; return; }
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const base64 = e.target.result;
+                        const s = addSticker('image', base64, file.name);
+                        appState.annoEdit.stickerId = s.id;
+                        appState.annoEdit._stickerTab = 'image';  // 切到图片 tab 让用户看到
+                        console.log('[anno] 图片上传成功，stickerId=', s.id, 'stickers总数=', appState.userData.stickers.length);
+                        showToast('贴纸上传成功 ✓', 'success');
+                        // 不关 Popover，让用户亲眼看到效果
+                    };
+                    reader.onerror = () => showToast('图片读取失败', 'error');
+                    reader.readAsDataURL(file);
+                    ev.target.value = '';
+                }
+                // 文本输入 emoji 添加到贴纸
+                function addStickerEmojiFromInput() {
+                    const val = (appState.annoEdit._customEmojiInput || '').trim();
+                    if (!val) return;
+                    // 取第一个字符（emoji 可能是 surrogate pair，但直接用就行）
+                    const emojiChar = [...val][0] || val;
+                    selectStickerAndClose('emoji', emojiChar);
+                    appState.annoEdit._customEmojiInput = '';
+                }
+                // 上传图片贴纸：FileReader → base64 → addSticker → 选中
+                function onStickerImageUpload(ev) {
+                    const file = ev.target.files && ev.target.files[0];
+                    if (!file) return;
+                    if (file.size > 512 * 1024) { showToast('图片不能超过 512KB（贴纸存本地，太大撑爆存储空间）', 'warning'); ev.target.value = ''; return; }
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const base64 = e.target.result;
+                        const s = addSticker('image', base64, file.name);
+                        appState.annoEdit.stickerId = s.id;
+                        showToast('贴纸上传成功', 'success');
+                    };
+                    reader.onerror = () => showToast('图片读取失败', 'error');
+                    reader.readAsDataURL(file);
+                    ev.target.value = '';  // 清空 input 让下次选同一张也触发
+                }
+
+                // ===== 单击/双击处理函数 =====
+                // 单击高亮 → 显示文字批注 tooltip（圈注模式同时显示箭头）
+                function showAnnoNoteTooltip(hl) {
+                    const weiboId = hl.getAttribute('data-weibo-id');
+                    const annoId = hl.getAttribute('data-anno-id');
+                    if (!weiboId || !annoId) return;
+                    const arr = (appState.userData.annotations.items[weiboId] || []).filter(a => a.id === annoId);
+                    if (!arr.length) return;
+                    const a = arr[0];
+                    const matched = hl.getAttribute('data-matched') !== '0';
+                    const rect = hl.getBoundingClientRect();
+                    const isCircle = hl.classList.contains('anno-border-circle');
+                    const arrowDir = a.arrowDir || 'right';
+                    const arrow = a.arrowId ? (appState.userData.arrows || []).find(x => x.id === a.arrowId) : null;
+
+                    // 计算 note 位置（圈注按 arrowDir 方向偏移，高亮放正下方）
+                    let x, y, arrowFromX, arrowFromY, arrowToX, arrowToY, arrowAngle = 0;
+                    if (isCircle) {
+                        const cx = rect.left + rect.width / 2;
+                        const cy = rect.top + rect.height / 2;
+                        const rx = rect.width / 2;
+                        const ry = rect.height / 2;
+                        // 方向向量（对应四个方向按钮）
+                        let dx, dy;
+                        if (arrowDir === 'right') { dx = 1; dy = 0; }       // →正右
+                        else if (arrowDir === 'left') { dx = -1; dy = 0; }  // ←正左
+                        else if (arrowDir === 'down') { dx = 0; dy = 1; }   // ↓正下
+                        else { dx = 0; dy = -1; }                           // ↑正上
+                        // 用户角度微调（noteOffset.x 作为角度偏移，单位度）
+                        const userAng = (a.noteOffset && typeof a.noteOffset.x === 'number') ? a.noteOffset.x : 0;
+                        if (userAng) {
+                            const rad = userAng * Math.PI / 180;
+                            const c = Math.cos(rad), s = Math.sin(rad);
+                            const nx = dx * c - dy * s;
+                            const ny = dx * s + dy * c;
+                            dx = nx; dy = ny;
+                        }
+                        // 归一化
+                        const dlen = Math.sqrt(dx * dx + dy * dy) || 1;
+                        dx /= dlen; dy /= dlen;
+                        // 椭圆边缘交点：射线 (cx+t*dx, cy+t*dy) 与椭圆 (x/rx)^2+(y/ry)^2=1
+                        const t = 1 / Math.sqrt((dx / rx) * (dx / rx) + (dy / ry) * (dy / ry));
+                        arrowFromX = cx + dx * t;
+                        arrowFromY = cy + dy * t;
+                        // 箭头尖 = 起点沿方向延伸（箭头素材有效长度约 67px）
+                        const ARROW_LEN = 67;
+                        arrowToX = arrowFromX + dx * ARROW_LEN;
+                        arrowToY = arrowFromY + dy * ARROW_LEN;
+                        arrowAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+                        // 批注气泡锚点 = 箭头尖（CSS transform 按方向把气泡贴到尖上）
+                        x = arrowToX;
+                        y = arrowToY;
+                        // 边界兜底，保证气泡不超出视口
+                        const margin = 130;
+                        if (x < margin) x = margin;
+                        if (x > window.innerWidth - margin) x = window.innerWidth - margin;
+                        if (y < 60) y = 60;
+                        if (y > window.innerHeight - 40) y = window.innerHeight - 40;
+                    } else {
+                        x = rect.left + rect.width / 2;
+                        y = rect.bottom + 6;
+                        if (y + 80 > window.innerHeight) y = rect.top - 50;
+                    }
+                    appState.annoTooltip.mode = isCircle ? 'circle' : 'note';
+                    appState.annoTooltip.sticker = null;
+                    appState.annoTooltip.note = a.note || '(无批注内容)';
+                    appState.annoTooltip.createdAt = a.createdAt || '';
+                    appState.annoTooltip.matched = matched;
+                    appState.annoTooltip.x = x;
+                    appState.annoTooltip.y = y;
+                    appState.annoTooltip.arrowFromX = arrowFromX || 0;
+                    appState.annoTooltip.arrowFromY = arrowFromY || 0;
+                    appState.annoTooltip.arrowToX = arrowToX || 0;
+                    appState.annoTooltip.arrowToY = arrowToY || 0;
+                    appState.annoTooltip.arrowDir = arrowDir;
+                    appState.annoTooltip.arrowAngle = arrowAngle;
+                    appState.annoTooltip.arrowBase64 = arrow ? arrow.base64 : '';
+                    appState.annoTooltip.visible = true;
+                }
+                // 双击高亮 → 打开编辑 Dialog
+                function openAnnoEditFromHighlight(hl) {
+                    const weiboId = hl.getAttribute('data-weibo-id');
+                    const annoId = hl.getAttribute('data-anno-id');
+                    if (!weiboId || !annoId) return;
+                    const arr = (appState.userData.annotations.items[weiboId] || []).filter(a => a.id === annoId);
+                    if (!arr.length) return;
+                    const a = arr[0];
+                    appState.annoEdit.isNew = false;
+                    appState.annoEdit.weiboId = weiboId;
+                    appState.annoEdit.annoId = annoId;
+                    appState.annoEdit.start = a.start;
+                    appState.annoEdit.end = a.end;
+                    appState.annoEdit.color = a.color || 'yellow';
+                    appState.annoEdit.lineStyle = a.lineStyle || 'underline';
+                    appState.annoEdit.lineColor = a.lineColor || '#303133';
+                    appState.annoEdit.borderStyle = a.borderStyle || 'highlight';
+                    appState.annoEdit.bold = !!a.bold;
+                    appState.annoEdit.italic = !!a.italic;
+                    appState.annoEdit.fontFamily = a.fontFamily || '';
+                    appState.annoEdit.fontSize = a.fontSize || 14;
+                    appState.annoEdit.circleFrameId = a.circleFrameId || '';
+                    appState.annoEdit.arrowId = a.arrowId || '';
+                    appState.annoEdit.arrowDir = a.arrowDir || 'right';
+                    appState.annoEdit.noteOffset = a.noteOffset || { x: 0, y: 0 };
+                    appState.annoEdit.stickerId = a.stickerId || '';
+                    appState.annoEdit.text = a.text;
+                    appState.annoEdit.note = a.note || '';
+                    appState.annoEdit.createdAt = a.createdAt || '';
+                    appState.annoEdit._stickerPanelOpen = false;
+                    appState.annoEdit.visible = true;
                 }
 
                 // ----- 快照图片：去重持久化到用户目录 fav_images/ -----
@@ -6499,6 +8297,106 @@
                 onMounted(async () => {
                     normalizeCommentSources();
 
+                    // ===== 划线批注：全局事件委托（绕过 Vue 模板事件可能绑定失败的问题）=====
+                    document.addEventListener('mouseup', (ev) => {
+                        const target = ev.target;
+                        if (!target || !target.closest) return;
+                        const annoArea = target.closest('.anno-render-area');
+                        if (!annoArea) return;
+                        if (!appState.activeAnnoWeiboId) return;
+                        globalAnnoAreaMouseup(ev);
+                    }, false);
+
+                    // ===== hover 高亮 → 显示贴纸（有 stickerId 才显示；没贴纸则不显示任何 tooltip）=====
+                    document.addEventListener('mouseover', (ev) => {
+                        const target = ev.target;
+                        if (!target || !target.closest) return;
+                        const hl = target.closest('.anno-highlight');
+                        if (!hl) return;
+                        // 清掉可能残留的 click timer（防止 hover 时 timer 还没跑完就触发文字批注）
+                        if (window.__annoClickTimer) { clearTimeout(window.__annoClickTimer); window.__annoClickTimer = null; }
+                        const stickerId = hl.getAttribute('data-sticker-id') || '';
+                        // 没贴纸就不显示 tooltip
+                        if (!stickerId) { appState.annoTooltip.visible = false; return; }
+                        const sticker = getStickerById(stickerId);
+                        if (!sticker) { appState.annoTooltip.visible = false; return; }
+                        // 定位到高亮段**右上角**（贴纸模式：小圆形图标贴在右上角）
+                        const rect = hl.getBoundingClientRect();
+                        // 42px 圆形图标，中心放在高亮右上角往外 4px
+                        let x = rect.right + 21;  // 图标中心 x = 高亮右边缘 + 半径
+                        let y = rect.top - 18;    // 图标中心 y = 高亮上边缘 - 半径（偏上一点）
+                        // 边界保护：别跑出屏幕
+                        if (y < 24) y = rect.bottom + 18;  // 上方不够就放下方
+                        if (x > window.innerWidth - 24) x = rect.left - 21;  // 右侧不够就放左侧
+                        appState.annoTooltip.mode = 'sticker';
+                        appState.annoTooltip.sticker = sticker;
+                        appState.annoTooltip.x = x;
+                        appState.annoTooltip.y = y;
+                        appState.annoTooltip.visible = true;
+                    }, false);
+
+                    // 离开高亮 → 隐藏贴纸 tooltip（但不要清 click timer！）
+                    document.addEventListener('mouseout', (ev) => {
+                        const target = ev.target;
+                        if (!target || !target.closest) return;
+                        const hl = target.closest('.anno-highlight');
+                        if (!hl) return;
+                        if (ev.relatedTarget && hl.contains(ev.relatedTarget)) return;
+                        // 只隐藏贴纸模式的 tooltip（hover 弹出的）；
+                        // 文字批注/圈注模式（单击弹出的）不能被 mouseout 隐藏，否则刚弹出就消失
+                        if (appState.annoTooltip.mode === 'sticker') {
+                            appState.annoTooltip.visible = false;
+                        }
+                    }, false);
+
+                    // ===== 单击 → 显示文字批注 / 双击 → 打开编辑 =====
+                    // 用 timer 区分单双击：单击后 300ms 内无 dblclick 就显示文字批注 tooltip
+                    // timer 用 window 全局变量，确保所有事件监听器共享同一个
+                    window.__annoClickTimer = null;
+                    document.addEventListener('click', (ev) => {
+                        const target = ev.target;
+                        if (!target || !target.closest) return;
+                        const hl = target.closest('.anno-highlight');
+                        // 点击非高亮区域 → 关闭 tooltip
+                        if (!hl) {
+                            if (appState.annoTooltip.visible && appState.annoTooltip.mode !== 'sticker') {
+                                appState.annoTooltip.visible = false;
+                            }
+                            return;
+                        }
+                        ev.stopPropagation();
+                        console.log('[anno] CLICK on highlight, annoId=', hl.getAttribute('data-anno-id'));
+                        // 隐藏贴纸 tooltip
+                        appState.annoTooltip.visible = false;
+                        // 清除之前的 timer
+                        if (window.__annoClickTimer) { clearTimeout(window.__annoClickTimer); window.__annoClickTimer = null; }
+                        window.__annoClickTimer = setTimeout(() => {
+                            window.__annoClickTimer = null;
+                            console.log('[anno] click timer fired → show note tooltip');
+                            showAnnoNoteTooltip(hl);
+                        }, 300);
+                    }, false);
+                    document.addEventListener('dblclick', (ev) => {
+                        const target = ev.target;
+                        if (!target || !target.closest) return;
+                        const hl = target.closest('.anno-highlight');
+                        if (!hl) return;
+                        ev.stopPropagation();
+                        ev.preventDefault();  // 阻止浏览器默认双击选中
+                        console.log('[anno] DBLCLICK on highlight');
+                        // 清浏览器选区 → 防止 mouseup 弹浮动按钮
+                        if (window.getSelection) window.getSelection().removeAllRanges();
+                        // 标记：刚刚双击了，mouseup 跳过
+                        window.__annoJustDblclicked = true;
+                        setTimeout(() => { window.__annoJustDblclicked = false; }, 300);
+                        // 清单击 timer
+                        if (window.__annoClickTimer) { clearTimeout(window.__annoClickTimer); window.__annoClickTimer = null; }
+                        appState.annoTooltip.visible = false;
+                        appState.annoFloatBtn.visible = false;  // 关掉可能残留的浮动按钮
+                        // 双击：打开编辑 Dialog
+                        openAnnoEditFromHighlight(hl);
+                    }, false);
+
                     // 恢复 UI 模式偏好（localStorage）
                     const savedMode = localStorage.getItem('weibo_ui_mode');
                     if (savedMode && ['auto', 'pc', 'mobile'].includes(savedMode)) {
@@ -6679,6 +8577,7 @@
                     guideSteps,
                     agreeRiskNotice,
                     showRiskNotice,
+                    showToast,
                     crawlForm,
                     linkCheckingIds,
                     batchLinkChecking,
@@ -6796,6 +8695,61 @@
                     jumpToPageAndLocate,
                     fetchWeiboDate,
                     weiboCommentOpenMap,
+                    // 头像裁剪弹窗
+                    onAvatarCropPointerDown,
+                    onAvatarCropPointerMove,
+                    onAvatarCropPointerUp,
+                    onAvatarCropWheel,
+                    onAvatarCropTouchStart,
+                    onAvatarCropTouchMove,
+                    onAvatarCropTouchEnd,
+                    confirmAvatarCrop,
+                    closeAvatarCrop,
+                    // 头像框选择
+                    AVATAR_FRAMES,
+                    getAvatarFrameCss,
+                    selectAvatarFrame,
+                    openFramePicker,
+                    getAllAvatarFrames,
+                    addCustomAvatarFrame,
+                    deleteCustomAvatarFrame,
+                    onAvatarFrameFileUpload,
+                    // 划线批注
+                    ANNO_COLORS,
+                    ANNO_LINE_STYLES,
+                    ANNO_FONT_SIZES,
+                    ANNO_SYSTEM_FONTS,
+                    ANNO_DEFAULT_EMOJIS,
+                    getAnnoBgColor,
+                    annoEmojiStickers,
+                    annoImageStickers,
+                    annoPreviewStyle,
+                    annoArrowPreview,
+                    annoColorMeta,
+                    annosOf,
+                    annoCountOf,
+                    renderAnnotatedContent,
+                    toggleAnnoMode,
+                    onAnnoAreaMouseup,
+                    onAnnoAreaClick,
+                    onAnnoSpanClick,
+                    openAnnoEditorFromFloat,
+                    saveAnnoEdit,
+                    deleteAnnoEdit,
+                    clearAllAnnos,
+                    getStickerById,
+                    addSticker,
+                    removeSticker,
+                    deleteStickerAndUpdate,
+                    deleteEmojiFromCategory,
+                    addCircleFrame, removeCircleFrame, onCircleFrameUpload,
+                    addArrow, removeArrow, onArrowUpload, onFontUpload, getUserFontValue,
+                    selectOrCreateSticker,
+                    selectStickerAndClose,
+                    onStickerImageUpload,
+                    onStickerImageUploadAndClose,
+                    triggerStickerUpload,
+                    addStickerEmojiFromInput,
                     appState
                 };
             },
@@ -7287,16 +9241,34 @@
                                                     <div v-if="weibo.linkCheckedAt" style="color: #909399; font-size: 12px; margin-top: 8px;">上次检测：{{ weibo.linkCheckedAt }}</div>
                                                 </div>
                                             </template>
-                                            <div style="display: flex; gap: 8px; margin-bottom: 4px;">
-                                                <el-input
-                                                    type="textarea"
-                                                    :model-value="weibo.content"
-                                                    @update:model-value="(v) => { weibo.content = v; saveAllData(); }"
-                                                    :rows="3"
-                                                    style="flex: 1;"
-                                                    @focus="trackCursor" @click="trackCursor" @keyup="trackCursor"
-                                                ></el-input>
-                                                <el-button type="info" size="small" @click="openEmojiPicker({ obj: weibo, key: 'content', afterUpdate: () => saveAllData() })">😊</el-button>
+                                            <div style="margin-bottom: 4px;">
+                                                <!-- 批注工具条 -->
+                                                <div class="anno-toolbar">
+                                                    <button type="button" class="anno-toggle-btn" :class="{ active: appState.activeAnnoWeiboId === weibo.weiboId }" @click.stop="toggleAnnoMode(weibo.weiboId)" :title="'开启后进入只读批注模式'">
+                                                        💡 批注模式
+                                                        <span v-if="annoCountOf(weibo.weiboId) > 0" class="anno-badge">{{ annoCountOf(weibo.weiboId) }}</span>
+                                                    </button>
+                                                    <span v-if="appState.activeAnnoWeiboId === weibo.weiboId" class="anno-tip">选中文本即可添加批注；点击高亮处可编辑/删除</span>
+                                                    <button v-if="appState.activeAnnoWeiboId === weibo.weiboId && annoCountOf(weibo.weiboId) > 0" type="button" class="anno-clear-btn" @click.stop="clearAllAnnos(weibo.weiboId)" title="清空该微博所有批注">🗑️ 清空</button>
+                                                </div>
+                                                <!-- 批注模式：只读高亮渲染区 -->
+                                                <div v-if="appState.activeAnnoWeiboId === weibo.weiboId"
+                                                     class="anno-render-area"
+                                                     @mouseup="onAnnoAreaMouseup($event, weibo)"
+                                                     :data-weibo-id="weibo.weiboId"
+                                                     v-html="renderAnnotatedContent(weibo)"></div>
+                                                <!-- 编辑模式：textarea + emoji -->
+                                                <div v-else style="display: flex; gap: 8px;">
+                                                    <el-input
+                                                        type="textarea"
+                                                        :model-value="weibo.content"
+                                                        @update:model-value="(v) => { weibo.content = v; saveAllData(); }"
+                                                        :rows="3"
+                                                        style="flex: 1;"
+                                                        @focus="trackCursor" @click="trackCursor" @keyup="trackCursor"
+                                                    ></el-input>
+                                                    <el-button type="info" size="small" @click="openEmojiPicker({ obj: weibo, key: 'content', afterUpdate: () => saveAllData() })">😊</el-button>
+                                                </div>
                                             </div>
                                             <div v-if="$extractUrls(weibo.content).length > 0" style="margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 6px;">
                                                 <a v-for="(u, uidx) in $extractUrls(weibo.content)" :key="uidx" :href="u" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #409eff; text-decoration: underline; word-break: break-all;">🔗{{ u }}</a>
@@ -7894,12 +9866,15 @@
                             <el-card style="margin-bottom: 16px;">
                                 <div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
                                     <div style="text-align: center;">
-                                        <div class="avatar-ring">
+                                        <div class="avatar-ring" :style="{ background: getAvatarFrameCss(appState.userData.profile && appState.userData.profile.avatarFrame) }">
                                             <img v-if="appState.avatarUrl" :src="appState.avatarUrl" class="profile-avatar">
                                             <span v-else class="profile-avatar profile-avatar-empty">👤</span>
                                         </div>
                                         <input ref="avatarInputRef" type="file" accept="image/*" style="display:none;" @change="handleAvatarUpload">
-                                        <el-button size="small" plain style="margin-top: 10px;" @click="$refs.avatarInputRef && $refs.avatarInputRef.click()">上传头像</el-button>
+                                        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px; align-items: center;">
+                                            <el-button size="small" plain @click="$refs.avatarInputRef && $refs.avatarInputRef.click()">更换头像</el-button>
+                                            <el-button size="small" plain @click="openFramePicker">头像框</el-button>
+                                        </div>
                                     </div>
                                     <div style="flex: 1; min-width: 280px;">
                                         <div style="margin-bottom: 12px;">
@@ -7918,6 +9893,69 @@
                                     </div>
                                 </div>
                             </el-card>
+
+                            <!-- 头像裁剪弹窗：1:1 自由拖动 + 缩放 -->
+                            <el-dialog v-model="appState.avatarCrop.visible" title="裁剪头像" width="380px" :close-on-click-modal="false" :show-close="true" @close="closeAvatarCrop" class="avatar-crop-dialog">
+                                <div class="avatar-crop-tip">拖动调整位置 · 滚轮 / 双指缩放 · 始终保持 1:1</div>
+                                <div class="avatar-crop-stage"
+                                    :style="{ width: appState.avatarCrop.stageSize + 'px', height: appState.avatarCrop.stageSize + 'px' }"
+                                    @pointerdown="onAvatarCropPointerDown"
+                                    @pointermove="onAvatarCropPointerMove"
+                                    @pointerup="onAvatarCropPointerUp"
+                                    @pointercancel="onAvatarCropPointerUp"
+                                    @wheel.prevent="onAvatarCropWheel"
+                                    @touchstart="onAvatarCropTouchStart"
+                                    @touchmove="onAvatarCropTouchMove"
+                                    @touchend="onAvatarCropTouchEnd"
+                                    @touchcancel="onAvatarCropTouchEnd">
+                                    <img v-if="appState.avatarCrop.source" :src="appState.avatarCrop.source"
+                                        class="avatar-crop-img"
+                                        :style="{ transform: 'translate(' + appState.avatarCrop.dx + 'px,' + appState.avatarCrop.dy + 'px) scale(' + appState.avatarCrop.scale + ')', transformOrigin: '0 0' }"
+                                        draggable="false" />
+                                    <div class="avatar-crop-grid"></div>
+                                </div>
+                                <template #footer>
+                                    <el-button @click="closeAvatarCrop">取消</el-button>
+                                    <el-button type="primary" @click="confirmAvatarCrop">确认裁剪</el-button>
+                                </template>
+                            </el-dialog>
+
+                            <!-- 头像框样式选择弹窗 -->
+                            <el-dialog v-model="appState.framePickerVisible" title="选择头像框" width="380px" class="avatar-frame-dialog" draggable>
+                                <div class="avatar-frame-grid avatar-frame-grid-scroll">
+                                    <div v-for="frame in getAllAvatarFrames()" :key="frame.id || 'rainbow'"
+                                        :class="['avatar-frame-item', { selected: (appState.userData.profile && appState.userData.profile.avatarFrame || '') === frame.id }]"
+                                        @click="selectAvatarFrame(frame.id)">
+                                        <div class="avatar-frame-ring" :style="{ background: getAvatarFrameCss(frame.id) }">
+                                            <span class="avatar-frame-mock">👤</span>
+                                        </div>
+                                        <span class="avatar-frame-name">{{ frame.name }}</span>
+                                        <!-- 自定义框可删 -->
+                                        <span v-if="!frame.preset" class="avatar-frame-del" @click.stop="deleteCustomAvatarFrame(frame.id)">✕</span>
+                                    </div>
+                                </div>
+                                <!-- 上传本地头像框 -->
+                                <div class="avatar-frame-upload-row">
+                                    <label class="avatar-frame-upload-btn">
+                                        <input type="file" accept=".png,.svg,.css,.txt,.jpg,.jpeg,.webp" style="display:none;" @change="onAvatarFrameFileUpload" />
+                                        📤 上传本地头像框
+                                    </label>
+                                    <span class="avatar-frame-upload-hint">仅本地使用，不上传服务器</span>
+                                </div>
+                                <!-- 规范说明 -->
+                                <div class="avatar-frame-spec">
+                                    <div class="avatar-frame-spec-title">📐 文件规范</div>
+                                    <ul>
+                                        <li><b>PNG</b>：220×220px 正方形，中心 ≥208px 透明圆（仅留边框），≤512KB</li>
+                                        <li><b>SVG</b>：<code>viewBox="0 0 220 220"</code>，矢量边框，中心镂空</li>
+                                        <li><b>CSS/TXT</b>：一行 CSS background 表达式（如 <code>linear-gradient(135deg,#f00,#00f)</code> 或 <code>#ff6600</code>）</li>
+                                    </ul>
+                                </div>
+                                <div class="avatar-frame-foot">
+                                    <span>想让所有人用上你的设计？</span>
+                                    <a href="https://chanzuiyv.github.io/communitysite/#avatar-frame-submit" target="_blank" rel="noopener">查看投稿规范 →</a>
+                                </div>
+                            </el-dialog>
                             </div><!-- profile-pane-account 结束 -->
 
                             <!-- 收藏/点赞/标签（手机端在"收藏"tab，桌面端始终显示） -->
@@ -8374,6 +10412,309 @@
                 </div>
                 </transition>
         </template>
+
+        <!-- ===== 划线批注：浮动「➕ 批注」按钮 + 编辑 Dialog + hover tooltip（根级，任何页面都能显示） ===== -->
+        <!-- 贴纸上传用的隐藏 file input（放根级，不被 Popover teleported 影响） -->
+        <input id="annoStickerFileInput" type="file" accept="image/*" style="display:none;" @change="onStickerImageUploadAndClose" />
+        <!-- 浮动「➕ 批注」按钮 -->
+        <div v-if="appState.annoFloatBtn.visible" class="anno-float-btn"
+             :style="{ left: appState.annoFloatBtn.x + 'px', top: appState.annoFloatBtn.y + 'px' }"
+             @mousedown.stop @click.stop="openAnnoEditorFromFloat">
+            ➕ 批注
+        </div>
+        <!-- hover 高亮贴纸（fixed 定位，跟随高亮 span） -->
+        <div v-if="appState.annoTooltip.visible" class="anno-tooltip"
+             :class="[
+                'mode-' + appState.annoTooltip.mode,
+                { 'mismatch': !appState.annoTooltip.matched }
+             ]"
+             :data-dir="appState.annoTooltip.arrowDir"
+             :style="{ left: appState.annoTooltip.x + 'px', top: appState.annoTooltip.y + 'px' }">
+            <!-- 贴纸模式：右上角小圆形图标 -->
+            <template v-if="appState.annoTooltip.mode === 'sticker' && appState.annoTooltip.sticker">
+                <div v-if="appState.annoTooltip.sticker.type === 'emoji'" class="anno-tooltip-sticker-emoji">{{ appState.annoTooltip.sticker.content }}</div>
+                <img v-else-if="appState.annoTooltip.sticker.type === 'image'" :src="appState.annoTooltip.sticker.content" class="anno-tooltip-sticker-img" />
+            </template>
+            <!-- 文字批注模式：下方深色小框 + 箭头（圈注模式不用小三角，箭头走 SVG 层） -->
+            <template v-else>
+                <div v-if="appState.annoTooltip.mode !== 'circle'" class="anno-tooltip-arrow"></div>
+                <div class="anno-tooltip-text">{{ appState.annoTooltip.note || '(无批注内容)' }}</div>
+                <div class="anno-tooltip-meta">
+                    {{ appState.annoTooltip.createdAt }}
+                    <span v-if="!appState.annoTooltip.matched">· ⚠ 原文已变更</span>
+                </div>
+            </template>
+        </div>
+        <!-- 圈注模式：连接箭头 SVG 层（从圆框指向批注气泡） -->
+        <svg v-if="appState.annoTooltip.visible && appState.annoTooltip.mode === 'circle'"
+             class="anno-arrow-layer">
+            <defs>
+                <marker id="annoArrowHead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L9,3 z" fill="#409eff" />
+                </marker>
+            </defs>
+            <!-- 有自定义箭头素材用图片（旋转到正确方向，尾点落在框边缘），否则用 SVG 曲线 -->
+            <image v-if="appState.annoTooltip.arrowBase64"
+                   :x="appState.annoTooltip.arrowFromX - 5"
+                   :y="appState.annoTooltip.arrowFromY - 20"
+                   width="80" height="40"
+                   :href="appState.annoTooltip.arrowBase64"
+                   :transform="'rotate(' + appState.annoTooltip.arrowAngle + ' ' + appState.annoTooltip.arrowFromX + ' ' + appState.annoTooltip.arrowFromY + ')'"
+                   preserveAspectRatio="xMidYMid meet" />
+            <path v-else
+                  :d="'M ' + appState.annoTooltip.arrowFromX + ' ' + appState.annoTooltip.arrowFromY + ' C ' + (appState.annoTooltip.arrowFromX + (appState.annoTooltip.arrowToX - appState.annoTooltip.arrowFromX) * 0.4) + ' ' + (appState.annoTooltip.arrowFromY - 12) + ', ' + (appState.annoTooltip.arrowFromX + (appState.annoTooltip.arrowToX - appState.annoTooltip.arrowFromX) * 0.7) + ' ' + (appState.annoTooltip.arrowToY - 6) + ', ' + appState.annoTooltip.arrowToX + ' ' + appState.annoTooltip.arrowToY"
+                  stroke="#409eff" stroke-width="2.5" fill="none" marker-end="url(#annoArrowHead)" />
+        </svg>
+        <el-dialog v-model="appState.annoEdit.visible" :title="appState.annoEdit.isNew ? '添加批注' : '编辑批注'" width="100%" fullscreen :close-on-click-modal="false" class="anno-edit-dialog anno-edit-fullscreen" :style="'margin:0 !important;width:100% !important;max-width:100% !important;height:100vh !important;max-height:100vh !important;border-radius:0 !important;'" append-to-body>
+            <!-- ===== 统一工具栏（WPS 风格，单排） ===== -->
+            <div class="anno-wps-toolbar">
+                <!-- 标记方式：高亮 / 圈注 -->
+                <div class="anno-wps-group">
+                    <button type="button" :class="['anno-wps-btn', { active: appState.annoEdit.borderStyle === 'highlight' }]" @click="appState.annoEdit.borderStyle = 'highlight'" title="高亮标记">🖍️ 高亮</button>
+                    <button type="button" :class="['anno-wps-btn', { active: appState.annoEdit.borderStyle === 'circle' }]" @click="appState.annoEdit.borderStyle = 'circle'" title="圆圈框注">⭕ 圈注</button>
+                </div>
+                <span class="anno-wps-sep"></span>
+                <!-- 高亮颜色（弹窗） -->
+                <el-popover placement="bottom-start" :width="280" trigger="click" v-model:visible="appState.annoEdit._hlPopupOpen" popper-class="anno-wps-popover" :show-arrow="false" :teleported="true">
+                    <template #reference>
+                        <button type="button" class="anno-wps-btn" title="高亮背景色">
+                            <span class="anno-wps-icon-hl" :style="{ background: getAnnoBgColor(appState.annoEdit.color) || '#fff' }"></span>
+                            高亮
+                        </button>
+                    </template>
+                    <div class="anno-color-row">
+                        <label v-for="c in ANNO_COLORS" :key="'bg_'+c.key" :class="['anno-color-swatch', { selected: appState.annoEdit.color === c.key }]" :style="{ background: c.bg, borderColor: appState.annoEdit.color === c.key ? c.border : 'transparent' }">
+                            <input type="radio" v-model="appState.annoEdit.color" :value="c.key" style="display:none;">
+                            <span>{{ c.name }}</span>
+                        </label>
+                        <label class="anno-color-swatch anno-color-custom" :class="{ selected: appState.annoEdit.color && appState.annoEdit.color.startsWith('#') }" :style="appState.annoEdit.color && appState.annoEdit.color.startsWith('#') ? { borderColor: appState.annoEdit.color } : {}">
+                            <input type="color" v-model="appState.annoEdit.color" value="#67c23a" class="anno-color-picker" />
+                            <span>自定义</span>
+                        </label>
+                    </div>
+                </el-popover>
+                <!-- 划线样式+颜色（弹窗） -->
+                <el-popover placement="bottom-start" :width="300" trigger="click" v-model:visible="appState.annoEdit._linePopupOpen" popper-class="anno-wps-popover" :show-arrow="false" :teleported="true">
+                    <template #reference>
+                        <button type="button" class="anno-wps-btn" title="划线样式与颜色">
+                            <span class="anno-wps-icon-line" :class="'anno-line-' + appState.annoEdit.lineStyle" :style="{ color: appState.annoEdit.lineColor }">U</span>
+                            划线
+                        </button>
+                    </template>
+                    <div class="anno-linestyle-row" style="margin-bottom:8px;">
+                        <button type="button" v-for="ls in ANNO_LINE_STYLES" :key="ls.key"
+                                :class="['anno-linestyle-btn', { selected: appState.annoEdit.lineStyle === ls.key, ['anno-ls-' + ls.key]: true }]"
+                                @click="appState.annoEdit.lineStyle = ls.key">
+                            {{ ls.name }}
+                        </button>
+                    </div>
+                    <div class="anno-linecolor-row">
+                        <span class="anno-lc-label">颜色：</span>
+                        <label class="anno-lc-swatch" v-for="c in ['#303133','#409eff','#e6a23c','#f56c6c','#67c23a','#909399']" :key="c"
+                               :class="{ selected: appState.annoEdit.lineColor === c }" :style="{ background: c }"
+                               @click="appState.annoEdit.lineColor = c"></label>
+                        <label class="anno-lc-swatch anno-lc-custom" :class="{ selected: appState.annoEdit.lineColor && !['#303133','#409eff','#e6a23c','#f56c6c','#67c23a','#909399'].includes(appState.annoEdit.lineColor) }">
+                            <input type="color" v-model="appState.annoEdit.lineColor" class="anno-color-picker" />
+                            <span>🎨</span>
+                        </label>
+                    </div>
+                </el-popover>
+                <!-- 圈框素材（弹窗，仅圈注模式） -->
+                <template v-if="appState.annoEdit.borderStyle === 'circle'">
+                <el-popover placement="bottom-start" :width="340" trigger="click" v-model:visible="appState.annoEdit._framePopupOpen" popper-class="anno-wps-popover" :show-arrow="false" :teleported="true">
+                    <template #reference>
+                        <button type="button" class="anno-wps-btn" title="圈框素材">
+                            <span class="anno-wps-icon-frame">⭕</span>
+                            圈框
+                        </button>
+                    </template>
+                    <div class="anno-material-grid">
+                        <div v-for="f in (appState.userData.circleFrames || [])" :key="f.id" class="anno-material-item"
+                             :class="{ selected: appState.annoEdit.circleFrameId === f.id }"
+                             @click="appState.annoEdit.circleFrameId = f.id">
+                            <img :src="f.base64" class="anno-material-img" />
+                            <span class="anno-material-del" @click.stop="removeCircleFrame(f.id)">✕</span>
+                        </div>
+                        <label class="anno-material-upload">
+                            <input type="file" accept="image/png,image/svg+xml" style="display:none;" @change="onCircleFrameUpload" />
+                            ＋上传
+                        </label>
+                    </div>
+                </el-popover>
+                <!-- 箭头素材（弹窗，仅圈注模式） -->
+                <el-popover placement="bottom-start" :width="360" trigger="click" v-model:visible="appState.annoEdit._arrowPopupOpen" popper-class="anno-wps-popover" :show-arrow="false" :teleported="true">
+                    <template #reference>
+                        <button type="button" class="anno-wps-btn" title="箭头素材与方向">
+                            <span class="anno-wps-icon-arrow">➤</span>
+                            箭头
+                        </button>
+                    </template>
+                    <div class="anno-material-grid" style="margin-bottom:10px;">
+                        <div v-for="a in (appState.userData.arrows || [])" :key="a.id" class="anno-material-item"
+                             :class="{ selected: appState.annoEdit.arrowId === a.id }"
+                             @click="appState.annoEdit.arrowId = a.id">
+                            <img :src="a.base64" class="anno-material-img" />
+                            <span class="anno-material-del" @click.stop="removeArrow(a.id)">✕</span>
+                        </div>
+                        <label class="anno-material-upload">
+                            <input type="file" accept="image/png,image/svg+xml" style="display:none;" @change="onArrowUpload" />
+                            ＋上传
+                        </label>
+                    </div>
+                    <div class="anno-arrowdir-row">
+                        <span class="anno-ad-label">位置：</span>
+                        <button v-for="d in [{k:'right',n:'→'},{k:'left',n:'←'},{k:'down',n:'↓'},{k:'up',n:'↑'}]" :key="d.k"
+                                :class="['anno-ad-btn', { active: appState.annoEdit.arrowDir === d.k }]"
+                                @click="appState.annoEdit.arrowDir = d.k">{{ d.n }}</button>
+                    </div>
+                    <div class="anno-arrowdir-row" style="margin-top:6px;">
+                        <span class="anno-ad-label">微调：</span>
+                        <input type="range" min="-60" max="60" step="1" v-model.number="appState.annoEdit.noteOffset.x" style="flex:1; accent-color:#409eff;" />
+                        <span style="font-size:12px;color:#909399;width:42px;text-align:right;">{{ (appState.annoEdit.noteOffset && appState.annoEdit.noteOffset.x) || 0 }}°</span>
+                    </div>
+                </el-popover>
+                </template>
+                <span class="anno-wps-sep"></span>
+                <!-- 字体 -->
+                <select v-model="appState.annoEdit.fontFamily" class="anno-wps-select anno-wps-font" title="字体">
+                    <optgroup label="系统字体">
+                        <option v-for="f in ANNO_SYSTEM_FONTS" :key="f.value" :value="f.value">{{ f.label }}</option>
+                    </optgroup>
+                    <optgroup v-if="(appState.userData.userFonts || []).length" label="我的字体">
+                        <option v-for="f in appState.userData.userFonts" :key="f.id" :value="getUserFontValue(f)">{{ f.name }}</option>
+                    </optgroup>
+                </select>
+                <label class="anno-wps-iconbtn" title="上传字体">
+                    <input type="file" accept=".ttf,.otf,.woff,.woff2" style="display:none;" @change="onFontUpload" />
+                    📥
+                </label>
+                <!-- 字号 -->
+                <select v-model.number="appState.annoEdit.fontSize" class="anno-wps-select anno-wps-size" title="字号">
+                    <option v-for="s in ANNO_FONT_SIZES" :key="s.px" :value="s.px">{{ s.label }}</option>
+                </select>
+                <button type="button" class="anno-wps-iconbtn" title="增大字号" @click="appState.annoEdit.fontSize = Math.min(72, (appState.annoEdit.fontSize || 14) + 2)">A+</button>
+                <button type="button" class="anno-wps-iconbtn" title="减小字号" @click="appState.annoEdit.fontSize = Math.max(8, (appState.annoEdit.fontSize || 14) - 2)">A-</button>
+                <span class="anno-wps-sep"></span>
+                <!-- B / I -->
+                <button type="button" :class="['anno-wps-btn', 'anno-wps-bold', { active: appState.annoEdit.bold }]" @click="appState.annoEdit.bold = !appState.annoEdit.bold" title="加粗">B</button>
+                <button type="button" :class="['anno-wps-btn', 'anno-wps-italic', { active: appState.annoEdit.italic }]" @click="appState.annoEdit.italic = !appState.annoEdit.italic" title="斜体">I</button>
+                <span class="anno-wps-sep"></span>
+                <!-- 贴纸（已有 Popover） -->
+                <el-popover placement="bottom-start" :width="320" trigger="click" v-model:visible="appState.annoEdit._stickerPanelOpen" popper-class="anno-sticker-popover" :show-arrow="false" :teleported="true" :persistent="true">
+                    <template #reference>
+                        <button type="button" class="anno-wps-btn" title="贴纸">
+                            <template v-if="appState.annoEdit.stickerId && getStickerById(appState.annoEdit.stickerId)">
+                                <template v-if="getStickerById(appState.annoEdit.stickerId).type === 'emoji'">{{ getStickerById(appState.annoEdit.stickerId).content }}</template>
+                                <template v-else>🖼️</template>
+                            </template>
+                            <template v-else>🏷️</template>
+                            贴纸
+                        </button>
+                    </template>
+                    <div class="anno-sticker-popover-body">
+                        <span class="anno-sticker-popover-close" @click="appState.annoEdit.stickerId = ''; appState.annoEdit._stickerPanelOpen = false">✕</span>
+                        <div class="anno-sticker-tabs anno-sticker-tabs-text">
+                            <span :class="['anno-sticker-tab-text', { active: appState.annoEdit._stickerTab === 'emoji' }]" @click="appState.annoEdit._stickerTab = 'emoji'">emoji</span>
+                            <span :class="['anno-sticker-tab-text', { active: appState.annoEdit._stickerTab === 'image' }]" @click="appState.annoEdit._stickerTab = 'image'">图片</span>
+                        </div>
+                        <div v-if="appState.annoEdit._stickerTab === 'emoji'" class="anno-sticker-grid-wrap">
+                            <div class="anno-sticker-emoji-cats anno-sticker-emoji-cats-text">
+                                <span v-for="(emojis, catName) in appState.emojiCategories" :key="catName"
+                                      :class="['anno-sticker-cat-text', { active: appState.annoEdit._stickerEmojiCat === catName }]"
+                                      @click="appState.annoEdit._stickerEmojiCat = catName">{{ catName }}</span>
+                            </div>
+                            <div class="anno-sticker-grid">
+                                <div v-for="em in (appState.emojiCategories[appState.annoEdit._stickerEmojiCat] || [])" :key="'ec_'+em" class="anno-sticker-btn-wrap">
+                                    <button type="button" class="anno-sticker-btn"
+                                            :class="{ selected: appState.annoEdit.stickerId && getStickerById(appState.annoEdit.stickerId) && getStickerById(appState.annoEdit.stickerId).type === 'emoji' && getStickerById(appState.annoEdit.stickerId).content === em }"
+                                            @click="selectStickerAndClose('emoji', em)">{{ em }}</button>
+                                    <span class="anno-sticker-del" @click.stop="deleteEmojiFromCategory(appState.annoEdit._stickerEmojiCat, em)">✕</span>
+                                </div>
+                                <div v-for="s in annoEmojiStickers" :key="'u_'+s.id" class="anno-sticker-btn-wrap">
+                                    <button type="button" class="anno-sticker-btn" :class="{ selected: appState.annoEdit.stickerId === s.id }"
+                                            @click="selectStickerAndClose('emoji', s.content, s.id)">{{ s.content }}</button>
+                                    <span class="anno-sticker-del" @click.stop="deleteStickerAndUpdate(s.id)">✕</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else-if="appState.annoEdit._stickerTab === 'image'" class="anno-sticker-grid-wrap">
+                            <div class="anno-sticker-grid">
+                                <div v-for="s in annoImageStickers" :key="'img_'+s.id" class="anno-sticker-btn-wrap">
+                                    <button type="button" class="anno-sticker-btn anno-sticker-img-btn" :class="{ selected: appState.annoEdit.stickerId === s.id }"
+                                            @click="selectStickerAndClose('image', s.content, s.id)"><img :src="s.content" class="anno-sticker-img" /></button>
+                                    <span class="anno-sticker-del" @click.stop="deleteStickerAndUpdate(s.id)">✕</span>
+                                </div>
+                                <div v-if="!annoImageStickers.length" class="anno-sticker-empty">暂无图片贴纸，上传一张吧~</div>
+                            </div>
+                        </div>
+                        <div class="anno-sticker-footer">
+                            <template v-if="appState.annoEdit._stickerTab === 'image'">
+                                <button type="button" class="anno-sticker-upload-btn" @click.stop="triggerStickerUpload()">📷 上传图片</button>
+                                <span class="anno-sticker-hint">选完自动关闭</span>
+                            </template>
+                            <template v-else-if="appState.annoEdit._stickerTab === 'emoji'">
+                                <div class="anno-sticker-emoji-input-row" @mousedown.stop>
+                                    <input v-model="appState.annoEdit._customEmojiInput" @keyup.enter="addStickerEmojiFromInput" placeholder="粘贴/输入emoji回车" class="anno-sticker-emoji-input" />
+                                    <button type="button" class="anno-sticker-emoji-add" @click="addStickerEmojiFromInput">➕</button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </el-popover>
+            </div>
+
+            <!-- ===== 预览区 ===== -->
+            <div class="anno-wps-preview">
+                <div class="anno-wps-preview-label">划线内容（实时预览）：</div>
+                <div class="anno-edit-quote">
+                    <span class="anno-highlight"
+                          :class="['anno-line-' + appState.annoEdit.lineStyle, 'anno-border-' + appState.annoEdit.borderStyle, { 'has-frame': appState.annoEdit.borderStyle === 'circle' && appState.annoEdit.circleFrameId }]"
+                          :style="annoPreviewStyle">{{ appState.annoEdit.text }}</span>
+                </div>
+                <!-- 箭头组合预览（仅圈注模式） -->
+                <div v-if="appState.annoEdit.borderStyle === 'circle'" class="anno-arrow-preview">
+                    <div class="anno-ap-frame" :class="{ 'has-frame': annoArrowPreview.frameBase64 }"
+                         :style="{
+                             left: (annoArrowPreview.cx - annoArrowPreview.rx) + 'px',
+                             top: (annoArrowPreview.cy - annoArrowPreview.ry) + 'px',
+                             width: (annoArrowPreview.rx * 2) + 'px',
+                             height: (annoArrowPreview.ry * 2) + 'px',
+                             backgroundImage: annoArrowPreview.frameBase64 ? 'url(' + annoArrowPreview.frameBase64 + ')' : 'none',
+                             backgroundSize: '100% 100%',
+                             backgroundRepeat: 'no-repeat',
+                             backgroundPosition: 'center'
+                         }">
+                        <span class="anno-ap-frame-text" :style="{ fontSize: '14px' }">{{ appState.annoEdit.text || '文字' }}</span>
+                    </div>
+                    <img v-if="annoArrowPreview.arrowBase64" class="anno-ap-arrow"
+                         :src="annoArrowPreview.arrowBase64"
+                         :style="{
+                             left: (annoArrowPreview.fromX - 5) + 'px',
+                             top: (annoArrowPreview.fromY - 20) + 'px',
+                             width: '80px',
+                             height: '40px',
+                             transformOrigin: '5px 20px',
+                             transform: 'rotate(' + annoArrowPreview.angle + 'deg)'
+                         }" />
+                    <div class="anno-ap-note"
+                         :style="{ left: annoArrowPreview.toX + 'px', top: annoArrowPreview.toY + 'px', transform: annoArrowPreview.noteTransform, fontSize: '14px', fontFamily: appState.annoEdit.fontFamily || '', fontWeight: appState.annoEdit.bold ? '700' : '', fontStyle: appState.annoEdit.italic ? 'italic' : '' }">
+                        {{ appState.annoEdit.note || '批注文字' }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 批注内容 ===== -->
+            <div class="anno-wps-note">
+                <div class="anno-wps-preview-label">批注内容（支持 emoji）：</div>
+                <el-input v-model="appState.annoEdit.note" type="textarea" :rows="6" placeholder="可输入文字批注，也可以只用贴纸…" maxlength="500" show-word-limit></el-input>
+            </div>
+            <template #footer>
+                <el-button v-if="!appState.annoEdit.isNew" type="danger" @click="deleteAnnoEdit">🗑️ 删除</el-button>
+                <span style="flex:1"></span>
+                <el-button @click="appState.annoEdit.visible = false">取消</el-button>
+                <el-button type="primary" @click="saveAnnoEdit">保存</el-button>
+            </template>
+        </el-dialog>
 
         <!-- ===== 风险告知书（首次启动必弹，放在 v-if/v-else 之外，登录流程也能显示） ===== -->
         <el-dialog v-model="appState.riskNoticeVisible" title="📜 使用须知与风险告知" width="560px" :close-on-click-modal="false" :show-close="false">
